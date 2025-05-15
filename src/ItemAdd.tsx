@@ -88,7 +88,7 @@ const ItemAdd: React.FC<ItemAddProps> = ({ username, avatar, onLogout, onNavigat
       queryParams.append('souvenir', 'true');
     }
 
-    fetch(`http://192.168.55.6:8000/suggestions?${queryParams.toString()}`)
+    fetch(`${process.env.REACT_APP_API_URL}/suggestions?${queryParams.toString()}`)
       .then((response) => response.json())
       .then((data) => {
         const newSuggestions: any[] = [];

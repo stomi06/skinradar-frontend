@@ -1,23 +1,29 @@
 import logging
+import os
 from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from urllib.parse import urlencode
 import aiohttp
 import asyncpg
 import re
+from dotenv import load_dotenv
+
+# Załaduj zmienne środowiskowe
+load_dotenv()
 
 router = APIRouter()
 
-STEAM_API_KEY = '286C2554D224F431F3C08D86DB1A0B86'
+# Pobierz dane z zmiennych środowiskowych
+STEAM_API_KEY = os.getenv('STEAM_API_KEY')
 STEAM_LOGIN_URL = "https://steamcommunity.com/openid/login"
-MOBILE_REDIRECT_URL = "http://192.168.55.6:3000/?"
+MOBILE_REDIRECT_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000') + '?'
 
 db_params = {
-    "user": "postgres",
-    "password": "Klusek123",
-    "host": "localhost",
-    "port": 5432,
-    "database": "users_db"
+    "user": os.getenv('DB_USER', 'postgres'),
+    "password": os.getenv('DB_PASSWORD', ''),
+    "host": os.getenv('DB_HOST', 'localhost'),
+    "port": os.getenv('DB_PORT', 5432),
+    "database": os.getenv('DB_NAME', 'users_db')
 }
 
 DATABASE_URL = f"postgresql://{db_params['user']}:{db_params['password']}@{db_params['host']}:{db_params['port']}/{db_params['database']}"
@@ -28,13 +34,14 @@ async def get_db_connection():
 
 @router.get("/auth/steam")
 async def steam_login():
+    backend_url = os.getenv('BACKEND_URL', 'http://localhost:8000')
     params = {
         'openid.ns': "http://specs.openid.net/auth/2.0",
         'openid.identity': "http://specs.openid.net/auth/2.0/identifier_select",
         'openid.claimed_id': "http://specs.openid.net/auth/2.0/identifier_select",
         'openid.mode': 'checkid_setup',
-        'openid.return_to': "http://192.168.55.6:8000/auth/steam/callback",  # Zmień na odpowiedni adres
-        'openid.realm': "http://192.168.55.6:8000"  # Zmień na odpowiedni adres
+        'openid.return_to': f"{backend_url}/auth/steam/callback",
+        'openid.realm': backend_url
     }
     return RedirectResponse(url=f"{STEAM_LOGIN_URL}?{urlencode(params)}")
 
