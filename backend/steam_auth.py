@@ -18,15 +18,17 @@ STEAM_API_KEY = os.getenv('STEAM_API_KEY')
 STEAM_LOGIN_URL = "https://steamcommunity.com/openid/login"
 MOBILE_REDIRECT_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000') + '?'
 
-db_params = {
-    "user": os.getenv('DB_USER', 'postgres'),
-    "password": os.getenv('DB_PASSWORD', ''),
-    "host": os.getenv('DB_HOST', 'localhost'),
-    "port": os.getenv('DB_PORT', 5432),
-    "database": os.getenv('DB_NAME', 'users_db')
-}
-
-DATABASE_URL = f"postgresql://{db_params['user']}:{db_params['password']}@{db_params['host']}:{db_params['port']}/{db_params['database']}"
+DATABASE_URL = os.getenv('DATABASE_URL')
+if not DATABASE_URL:
+    # Jeśli nie ma DATABASE_URL, użyj oddzielnych parametrów jak wcześniej
+    db_params = {
+        "user": os.getenv('DB_USER', 'postgres'),
+        "password": os.getenv('DB_PASSWORD', ''),
+        "host": os.getenv('DB_HOST', 'localhost'),
+        "port": os.getenv('DB_PORT', 5432),
+        "database": os.getenv('DB_NAME', 'users_db')
+    }
+    DATABASE_URL = f"postgresql://{db_params['user']}:{db_params['password']}@{db_params['host']}:{db_params['port']}/{db_params['database']}"
 
 async def get_db_connection():
     conn = await asyncpg.connect(DATABASE_URL)
