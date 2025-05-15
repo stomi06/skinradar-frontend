@@ -1,0 +1,459 @@
+*{
+  padding: 0;
+  margin: 0;
+}
+
+.loader {
+  border: 6px solid #14192d;
+  border-top: 6px solid #7C8BA1;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  0% { transform: rotate(0deg);}
+  100% { transform: rotate(360deg);}
+}
+
+.container {
+  display: flex;
+  flex-direction: column;
+  min-height: calc(100vh - 120px); /* odejmij wysokość menu i menu2 */
+  background-color: #111626;
+  padding-top: 60px;    /* wysokość menu */
+  padding-bottom: 60px; /* wysokość menu2 */
+  box-sizing: border-box;
+  position: relative;
+}
+
+.start-container {
+  height: 100vh;
+  background-color: #111626;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-button {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  background-color: #14192d;
+  padding: 12px 24px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+
+.steam-logo {
+  width: 32px;
+  height: 32px;
+  margin-right: 12px;
+}
+
+.login-text {
+  font-size: 18px;
+  color: #7C8BA1;
+  font-weight: bold;
+}
+
+.scroll-container {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  height: calc(100vh - 120px); /* odejmij wysokość menu i menu2 */
+}
+
+/* Dla Chrome, Edge, Safari */
+.scroll-container::-webkit-scrollbar {
+  display: none;
+}
+
+.menu {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 100;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 10px 0;
+  background-color: #14192d;
+  justify-content: center; /* wyśrodkuj wewnętrzny kontener */
+  height: 60px;
+  box-sizing: border-box;
+}
+
+.menu-inner {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;
+  position: relative; /* dodaj to, jeśli jeszcze nie ma */
+}
+
+.menu-icon {
+  width: 35px;
+  height: 35px;
+  margin-left: 25px;
+  object-fit: contain;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+.menu-icon img{
+  width: 35px;
+  height: 35px;
+  object-fit: contain;
+}
+
+.avatar {
+  width: 33px;
+  height: 33px;
+  border-radius: 5px;
+  margin-right: 25px;
+  cursor: pointer;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+.avatar img{
+  width: 35px;
+  height: 35px;
+  border-radius: 5px;
+  object-fit: contain;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #14192d;
+  border-radius: 5px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  width: max-content;
+}
+
+.dropdown-button {
+  background-color: #14192d;
+  border: none;
+  padding: 10px;
+  cursor: pointer;
+}
+
+.dropdown-button-text {
+  color: #7C8BA1;
+  font-size: 16px;
+}
+
+.user-menu {
+  position: absolute;
+  top: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+  background-color: #14192d;
+  border-radius: 5px;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.user-menu-text {
+  color: #7C8BA1;
+  font-size: 16px;
+  padding: 10px;
+}
+
+.logout-button {
+  width: 30px;
+  height: 30px;
+  text-align: center;
+  background-color: #14192d;
+  border: none;
+  cursor: pointer;
+}
+
+.logout-icon {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+.search-container {
+  width: 90%;
+  max-width: 432px;
+  margin: 25px auto;
+  background-color: #111626;
+}
+
+.input-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.input {
+  background-color: #14192d;
+  color: #7C8BA1;
+  padding: 10px;
+  border-radius: 5px;
+  flex: 1;
+}
+
+.input-inner {
+  width: 100%;
+  background-color: #14192d;
+  color: #dfdfdf;
+  padding: 3px;
+  border-radius: 5px;
+}
+
+/* Style dla placeholdera - różne przeglądarki wymagają różnych selektorów */
+.input-inner::placeholder {
+  color: #7C8BA1;
+}
+
+/* Dla Chrome, Safari, Opera */
+.input-inner::-webkit-input-placeholder {
+  color: #7C8BA1;
+}
+
+/* Dla Firefox */
+.input-inner::-moz-placeholder {
+  color: #7C8BA1;
+  opacity: 1;
+}
+
+/* Dla Internet Explorer */
+.input-inner:-ms-input-placeholder {
+  color: #7C8BA1;
+}
+
+/* Dla Edge */
+.input-inner::-ms-input-placeholder {
+  color: #7C8BA1;
+}
+
+.search-icon {
+  width: 20px;
+  height: 20px;
+  margin-right: 10px;
+}
+
+.filter-icon {
+  width: 30px;
+  height: 30px;
+  margin-left: 10px;
+  cursor: pointer;
+}
+
+.filter-container {
+  max-height: 0; /* zamiast transform */
+  opacity: 0;
+  margin-top: -5px;
+  margin-bottom: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  overflow: hidden;
+  transition: all 0.4s cubic-bezier(0.33, 1, 0.68, 1);
+  pointer-events: none;
+  position: relative;
+  background-color: #111626;
+}
+
+/* Dodaj tę klasę dynamicznie w React, gdy filtr jest widoczny */
+.filter-container.filter-container-visible {
+  max-height: 300px; /* dopasuj do największej możliwej wysokości filtrów */
+  opacity: 1;
+  padding-top: 10px;
+  margin-bottom: 15px;
+  pointer-events: auto;
+}
+
+.checkbox-container {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  margin-bottom: 10px;
+}
+
+.checkbox-button {
+  background-color: #14192d;
+  padding: 10px;
+  border-radius: 5px;
+  margin: 3px;
+  border: none;
+}
+
+.checkbox-button-active {
+  background-color: #112b6f;
+}
+
+.checkbox-text {
+  color: #7C8BA1;
+  font-size: 16px;
+}
+
+.search-button {
+  margin-top: 5px; /* Stały odstęp od filtrów */
+  background-color: #112b6f;
+  padding: 10px;
+  color: #7C8BA1;
+  border-radius: 5px;
+  text-align: center;
+  border: none;
+  width: 100%;
+  cursor: pointer;
+  transition: transform 0.2s ease; /* Subtelna animacja przycisku */
+}
+
+.search-button:hover {
+  transform: translateY(-1px);
+}
+
+.suggestions-container {
+  width: 85%;
+  margin: 0 auto;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.4s, transform 0.4s;
+  pointer-events: none;
+}
+
+.suggestions-container.suggestions-container-visible {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+.suggestion-prefix {
+  color: #8d00e1;
+  font-weight: bold;
+  font-size: 15px;
+  margin-bottom: 2px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.suggestion-item {
+  min-width: 180px;
+  margin-bottom: 20px;
+  padding: 10px;
+  border-radius: 5px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.suggestion-text {
+  color: #7C8BA1;
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.suggestion-wear {
+  color: #7C8BA1;
+  font-size: 14px;
+  margin-bottom: 2px;
+}
+
+.suggestion-details {
+  color: #888;
+  font-size: 12px;
+  font-style: italic;
+}
+
+.suggestion-image {
+  width: 50%;
+  margin: 3%;
+  object-fit: contain;
+  margin-top: 5px;
+  border-radius: 5px;
+}
+
+@media (min-width: 360px) {
+  .suggestions-container{
+    width: 310px;
+  }
+}
+
+.title {
+  font-size: 20px;
+  color: #7C8BA1;
+  text-align: center;
+}
+
+.menu2 {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  z-index: 100;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  padding: 10px 0;
+  background-color: #14192d;
+  justify-content: center; /* wyśrodkuj wewnętrzny kontener */
+  height: 60px;
+  box-sizing: border-box;
+}
+
+.menu2-inner {
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  max-width: 480px;
+  width: 100%;
+  margin: 0 auto;;
+}
+
+.menu2-button {
+  margin: 0px 25px;
+  border-radius: 5px;
+  padding: 2px;
+}
+
+@media (max-width: 300px) {
+  .menu2-button {
+    margin: 0px 3%;
+  }
+  
+}
+
+.menu2-icon-wrapper {
+  width: 40px;
+  height: 56px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.menu2-icon-wrapper-active {
+  border-top: 4px solid #112b6f;
+}
+
+.menu-button-icon {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+.menu-button-icon-active {
+  width: 25px;
+  height: 25px;
+}
