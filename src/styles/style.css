@@ -4,7 +4,7 @@
 }
 
 .loader {
-  border: 6px solid #14192d;
+  border: 6px solid #111938;
   border-top: 6px solid #7C8BA1;
   border-radius: 50%;
   width: 30px;
@@ -20,7 +20,7 @@
   display: flex;
   flex-direction: column;
   min-height: calc(100vh - 120px); /* odejmij wysokość menu i menu2 */
-  background-color: #111626;
+  background-color: #10172c;
   padding-top: 60px;    /* wysokość menu */
   padding-bottom: 60px; /* wysokość menu2 */
   box-sizing: border-box;
@@ -29,7 +29,7 @@
 
 .start-container {
   height: 100vh;
-  background-color: #111626;
+  background-color: #10172c;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -45,7 +45,7 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  background-color: #14192d;
+  background-color: #111938;
   padding: 12px 24px;
   border-radius: 8px;
   border: none;
@@ -85,7 +85,7 @@
   flex-direction: row;
   align-items: center;
   padding: 10px 0;
-  background-color: #14192d;
+  background-color: #111938;
   justify-content: center; /* wyśrodkuj wewnętrzny kontener */
   height: 60px;
   box-sizing: border-box;
@@ -137,7 +137,7 @@
   top: 60px;
   left: 50%;
   transform: translateX(-50%);
-  background-color: #14192d;
+  background-color: #111938;
   border-radius: 5px;
   z-index: 10;
   display: flex;
@@ -146,7 +146,7 @@
 }
 
 .dropdown-button {
-  background-color: #14192d;
+  background-color: #111938;
   border: none;
   padding: 10px;
   cursor: pointer;
@@ -162,7 +162,7 @@
   top: 60px;
   left: 50%;
   transform: translateX(-50%);
-  background-color: #14192d;
+  background-color: #111938;
   border-radius: 5px;
   z-index: 10;
   display: flex;
@@ -180,7 +180,7 @@
   width: 30px;
   height: 30px;
   text-align: center;
-  background-color: #14192d;
+  background-color: #111938;
   border: none;
   cursor: pointer;
 }
@@ -195,18 +195,18 @@
   width: 90%;
   max-width: 432px;
   margin: 25px auto;
-  background-color: #111626;
+  background-color: #10172c;
 }
 
 .input-row {
   display: flex;
   flex-direction: row;
-  align-items: center;
+  
   margin-bottom: 20px;
 }
 
 .input {
-  background-color: #14192d;
+  background-color: #111938;
   color: #7C8BA1;
   padding: 10px;
   border-radius: 5px;
@@ -215,7 +215,7 @@
 
 .input-inner {
   width: 100%;
-  background-color: #14192d;
+  background-color: #111938;
   color: #dfdfdf;
   padding: 3px;
   border-radius: 5px;
@@ -253,10 +253,26 @@
   margin-right: 10px;
 }
 
+.filter-button{
+  margin-left: 10px;
+  background-color: #111938;
+  border: none;
+  border-radius: 5px; 
+  align-items: center; 
+  display: flex; 
+  height: 41px;
+  width: 41px;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease; 
+}
+.filter-button:hover {
+  filter: brightness(1.1);
+}
+
 .filter-icon {
   width: 30px;
   height: 30px;
-  margin-left: 10px;
   cursor: pointer;
 }
 
@@ -271,7 +287,7 @@
   transition: all 0.4s cubic-bezier(0.33, 1, 0.68, 1);
   pointer-events: none;
   position: relative;
-  background-color: #111626;
+  background-color: #10172c;
 }
 
 /* Dodaj tę klasę dynamicznie w React, gdy filtr jest widoczny */
@@ -291,11 +307,12 @@
 }
 
 .checkbox-button {
-  background-color: #14192d;
+  background-color: #111938;
   padding: 10px;
   border-radius: 5px;
   margin: 3px;
   border: none;
+  cursor: pointer;
 }
 
 .checkbox-button-active {
@@ -317,15 +334,21 @@
   border: none;
   width: 100%;
   cursor: pointer;
-  transition: transform 0.2s ease; /* Subtelna animacja przycisku */
+  transition: all 0.2s ease; /* Subtelna animacja przycisku */
+}
+
+.search-button-text{
+  color: #7C8BA1;
+  letter-spacing: 0.4px;
+  font-weight: bold;
 }
 
 .search-button:hover {
-  transform: translateY(-1px);
+  filter: brightness(1.1);
 }
 
 .suggestions-container {
-  width: 85%;
+  width: 94%;
   margin: 0 auto;
   opacity: 0;
   transform: translateY(20px);
@@ -349,7 +372,8 @@
 }
 
 .suggestion-item {
-  min-width: 180px;
+  position: relative;
+  min-width: 200px;
   margin-bottom: 20px;
   padding: 10px;
   border-radius: 5px;
@@ -357,12 +381,64 @@
   display: flex;
   flex-direction: column;
   gap: 3px;
+  cursor:default;
+}
+
+
+.suggestion-item-bg::before,
+.suggestion-item-bg-hover::before,
+.suggestion-item-bg::after,
+.suggestion-item-bg-hover::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease-in-out, transform 0.3s cubic-bezier(0.33,1,0.68,1);
+  transform-origin: left;
+  transform: scaleX(1);
+}
+
+.suggestion-item-bg::before,
+.suggestion-item-bg-hover::before {
+  background: var(--suggestion-gradient-15, none);
+  opacity: 1;
+}
+
+.suggestion-item-bg::after,
+.suggestion-item-bg-hover::after {
+  background: var(--suggestion-gradient-50, none);
+  opacity: 0;
+}
+
+.suggestion-item-bg-hover::after {
+  opacity: 1;
+}
+.suggestion-item-bg-hover::before {
+  opacity: 0;
+  
+}
+
+.suggestion-item > * {
+  position: relative;
+  z-index: 10;
+}
+
+
+.suggestion-image {
+  width: 50%;
+  margin: 3%;
+  object-fit: contain;
+  margin-top: 5px;
+  border-radius: 5px;
 }
 
 .suggestion-text {
   color: #7C8BA1;
-  font-size: 16px;
+  font-size: 17px;
+  letter-spacing: 0.5px;
   font-weight: bold;
+  filter: brightness(1.1);
 }
 
 .suggestion-wear {
@@ -376,18 +452,114 @@
   font-size: 12px;
   font-style: italic;
 }
-
-.suggestion-image {
-  width: 50%;
-  margin: 3%;
+.suggestion-menu{
+  position: absolute;
+  right: 10px;
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.suggestion-menu img{
+  width: 25px;
+  height: 25px;
   object-fit: contain;
+  cursor: pointer;
+}
+.suggestion-cart:hover{
+  filter: brightness(1.1);
+}
+.suggestion-prices{
+  opacity: 0;
+  visibility: hidden;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(16, 23, 44, 0.96);
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease-in-out;
+  color: #7C8BA1;
+  font-size: 20px;
+}
+.prices-container img{
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+}
+.prices-container > *{
+  align-items: center;
+}
+.suggestion-eye:hover{
+  filter: brightness(1.1);
+}
+.suggestion-info-container{
+  display: flex;
+  flex-direction: row;
+  justify-content: space-between;
+}
+.suggestion-info{
+  width: calc(100% - 95px);
+  display: flex;
+  flex-direction: column;
+}
+
+.suggestion-price-container{
+  gap: 5px;
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: end;
+}
+.suggestion-price{
+  color: #7C8BA1;
+  font-size: 16px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  filter: brightness(1.1);
+}
+.other-markets{
+  color: #7C8BA1;
+  font-size: 12px;
+  font-style: italic;
   margin-top: 5px;
+}
+
+.buy-button {
+  background-color: #112b6f;
+  padding: 10px;
+  color: #7C8BA1;
+  font-weight: bold;
+  font-size: 12px;
   border-radius: 5px;
+  text-align: center;
+  letter-spacing: 0.4px;
+  border: none;
+  width: 90px;
+  height: 45px;
+  cursor: pointer;
+  transition: all 0.2s ease; /* Subtelna animacja przycisku */
+}
+.buy-button:hover {
+  filter: brightness(1.1);
 }
 
 @media (min-width: 360px) {
   .suggestions-container{
-    width: 310px;
+    width: 320px;
+  }
+}
+
+@media (max-width: 320px) {
+  .suggestions-container{
+    width: 280px;
   }
 }
 
@@ -406,7 +578,7 @@
   flex-direction: row;
   align-items: center;
   padding: 10px 0;
-  background-color: #14192d;
+  background-color: #111938;
   justify-content: center; /* wyśrodkuj wewnętrzny kontener */
   height: 60px;
   box-sizing: border-box;
@@ -426,6 +598,7 @@
   margin: 0px 25px;
   border-radius: 5px;
   padding: 2px;
+  cursor: pointer;
 }
 
 @media (max-width: 300px) {
@@ -457,3 +630,4 @@
   width: 25px;
   height: 25px;
 }
+

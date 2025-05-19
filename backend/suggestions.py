@@ -5,6 +5,9 @@ from difflib import SequenceMatcher
 import unicodedata
 from functools import lru_cache
 from typing import List, Tuple, Dict, Any, Optional
+import psycopg2
+import os
+from dotenv import load_dotenv
 
 router = APIRouter()
 
@@ -220,7 +223,7 @@ def get_suggestions(query: str, condition: str = "", stattrak: bool = False, sou
             
             # Build suggestions list
             suggestions = []
-            max_suggestions = 5
+            max_suggestions = 3
             
             # Find images for top matches
             for match_data, _ in best_matches:
@@ -232,6 +235,7 @@ def get_suggestions(query: str, condition: str = "", stattrak: bool = False, sou
                 
                 # Add to suggestions if image found
                 if found_image:
+                    prices = get_market_prices(fullname)
                     suggestions.append({
                         "market_hash_name": base_fullname,
                         "rarity": rarity,
@@ -241,7 +245,8 @@ def get_suggestions(query: str, condition: str = "", stattrak: bool = False, sou
                         "display_wear": found_wear,
                         "imageurl": found_image,
                         "is_stattrak": stattrak and need_wear == 1,
-                        "is_souvenir": souvenir and need_wear == 1
+                        "is_souvenir": souvenir and need_wear == 1,
+                        "prices": prices  # <-- dodaj to pole
                     })
                     
                     # Check if we have enough suggestions
@@ -301,7 +306,8 @@ def get_suggestions(query: str, condition: str = "", stattrak: bool = False, sou
                                 "display_wear": wear,
                                 "imageurl": row_img[0],
                                 "is_stattrak": False,
-                                "is_souvenir": True
+                                "is_souvenir": True,
+                                "prices": get_market_prices(fullname_try)  # <-- DODAJ TO!
                             })
                             break
                     
@@ -312,3 +318,27 @@ def get_suggestions(query: str, condition: str = "", stattrak: bool = False, sou
             
     except Exception as e:
         return {"error": str(e)}
+
+def get_market_prices(fullname: str):
+    prices = {}
+    try:
+        conn = psycopg2.connect(
+            dbname= os.getenv('DB_NAME2'),
+            user= os.getenv('DB_USER'),
+            password= os.getenv('DB_PASSWORD'),
+            host= os.getenv('DB_HOST'),
+            port= os.getenv('DB_PORT')
+        )
+        cursor = conn.cursor()
+        for market in ["csfloat", "bitskins", "skinport", "waxpeer"]:
+            cursor.execute(
+                "SELECT min_price FROM prices WHERE market_hash_name = %s AND source = %s LIMIT 1",
+                (fullname, market)
+            )
+            row = cursor.fetchone()
+            prices[market] = float(row[0]) if row and row[0] is not None else None
+        cursor.close()
+        conn.close()
+    except Exception as e:
+        print("DB price fetch error:", e)
+    return prices
