@@ -10,6 +10,7 @@ const SkinRadarApp = () => {
   const handleSteamLogin = async () => {
     try {
       const apiUrl = process.env.REACT_APP_API_URL;
+      console.log('API URL:', apiUrl); // <-- dodaj ten log
       window.location.href = `${apiUrl}/auth/steam`;
     } catch (error) {
       alert('Error: An error occurred during Steam login');
