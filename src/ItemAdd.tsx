@@ -90,7 +90,7 @@ const ItemAdd: React.FC<ItemAddProps> = ({ username, avatar, onLogout, onNavigat
       queryParams.append('souvenir', 'true');
     }
 
-    fetch(`${process.env.REACT_APP_API_URL}/suggestions?${queryParams.toString()}`)
+    fetch(`https://skinradar-d0a6bmd2a3c6dbde.northeurope-01.azurewebsites.net/suggestions?${queryParams.toString()}`)
       .then((response) => response.json())
       .then((data) => {
         const newSuggestions: any[] = [];
