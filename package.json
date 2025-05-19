@@ -18,5 +18,8 @@
     "@types/react": "^19.1.4",
     "@types/react-dom": "^19.1.5"
   },
-  "proxy": "http://localhost:8000"
+  "proxy": "http://localhost:8000",
+  "engines": {
+    "node": ">=20.0.0"
+  }
 }
