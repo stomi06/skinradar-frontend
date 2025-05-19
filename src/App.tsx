@@ -21,7 +21,7 @@ const SkinRadarApp = () => {
     const username = params.username as string;
     const avatar = params.avatar as string;
 
-    if (steamId && username && avatar) {
+    if (steamId && username && avatar) { 
       setSteamId(steamId);
       setUsername(username);
       setAvatar(avatar);
