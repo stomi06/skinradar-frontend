@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Query
 import sqlite3
 import re
 from difflib import SequenceMatcher
@@ -147,7 +147,14 @@ def get_image(fullname: str):
         return {"error": str(e)}
 
 @router.get("/suggestions")
-def get_suggestions(query: str, condition: str = "", stattrak: bool = False, souvenir: bool = False):
+def get_suggestions(
+    query: str, 
+    condition: str = "", 
+    stattrak: bool = False, 
+    souvenir: bool = False,
+    price_from: float = Query(None),
+    price_to: float = Query(None)
+):
     # Quick validation
     if not query or len(query.strip()) < 2:
         return []
@@ -218,107 +225,122 @@ def get_suggestions(query: str, condition: str = "", stattrak: bool = False, sou
             items_with_similarity.sort(key=lambda x: x[1], reverse=True)
             
             # Take top N matches based on search type
-            best_matches_count = 30 if souvenir else 10
+            best_matches_count = 200 if (price_from is not None or price_to is not None) else (30 if souvenir else 10)
             best_matches = items_with_similarity[:best_matches_count]
             
             # Build suggestions list
             suggestions = []
             max_suggestions = 3
+            items_checked = 0
+            max_items_to_check = 50
             
             # Find images for top matches
             for match_data, _ in best_matches:
+                if items_checked >= max_items_to_check:
+                    break
+                    
                 base_fullname, rarity, description, need_wear = match_data
                 
-                # Find image using helper function
-                found_image, found_wear, fullname = find_image_for_item(
-                    cursor_images, base_fullname, need_wear, condition, stattrak, souvenir)
-                
-                # Add to suggestions if image found
-                if found_image:
-                    prices = get_market_prices(fullname)
-                    suggestions.append({
-                        "market_hash_name": base_fullname,
-                        "rarity": rarity,
-                        "description": description,
-                        "need_wear": need_wear,
-                        "display_fullname": fullname,
-                        "display_wear": found_wear,
-                        "imageurl": found_image,
-                        "is_stattrak": stattrak and need_wear == 1,
-                        "is_souvenir": souvenir and need_wear == 1,
-                        "prices": prices  # <-- dodaj to pole
-                    })
+                # Jeśli need_wear=1, sprawdź wszystkie wear dla tego przedmiotu
+                if need_wear == 1:
+                    # Jeśli podano konkretny wear, sprawdzaj TYLKO ten wear
+                    if condition in wear_levels:
+                        possible_wears = [condition]  # Używaj tylko wybranego wear!
+                    else:
+                        # Brak wybranego wear - sprawdź wszystkie
+                        possible_wears = wear_levels
                     
-                    # Check if we have enough suggestions
-                    if len(suggestions) >= max_suggestions:
-                        if not souvenir or len(suggestions) >= max_suggestions:
-                            break
-            
-            # Extra processing for Souvenir items if needed
-            if souvenir and len(suggestions) < max_suggestions:
-                # Get all items with need_wear = 1
-                cursor_items.execute(
-                    "SELECT market_hash_name, rarity, description, need_wear FROM items WHERE need_wear = 1"
-                )
-                items_to_search = cursor_items.fetchall()
-                
-                # Calculate similarity with lower threshold
-                more_items = []
-                for row in items_to_search:
-                    if any(s["market_hash_name"] == row[0] for s in suggestions):
-                        continue  # Skip already found items
+                    found_in_range = False
+                    
+                    # Sprawdź każdy możliwy wear dla tego przedmiotu
+                    for wear in possible_wears:
+                        # Tworzenie nazwy z odpowiednim prefixem
+                        prefix = ""
+                        if stattrak:
+                            if base_fullname.startswith("★") or "Knife" in base_fullname:
+                                prefix = "★ StatTrak™ "
+                                clean_base = base_fullname.replace("★ ", "")
+                            else:
+                                prefix = "StatTrak™ "
+                                clean_base = base_fullname
+                        elif souvenir:
+                            prefix = "Souvenir "
+                            clean_base = base_fullname
+                        else:
+                            clean_base = base_fullname
+                            
+                        fullname_try = f"{prefix}{clean_base} ({wear})"
                         
-                    similarity = calculate_similarity(query, row[0])
-                    if similarity > 0.1:  # Very low threshold for extra Souvenir items
-                        more_items.append((row, similarity))
-                
-                more_items.sort(key=lambda x: x[1], reverse=True)
-                
-                # Process additional items
-                for match_data, _ in more_items:
-                    if len(suggestions) >= max_suggestions:
-                        break
-                        
-                    base_fullname, rarity, description, need_wear = match_data
-                    
-                    # Only process need_wear = 1 items for Souvenir
-                    if need_wear != 1:
-                        continue
-                    
-                    # Look for images with Souvenir prefix
-                    prefix = "Souvenir "
-                    base_fullname_with_prefix = f"{prefix}{base_fullname}"
-                    
-                    for wear in wear_levels:
-                        fullname_try = f"{base_fullname_with_prefix} ({wear})"
+                        # Sprawdź czy mamy obrazek
                         cursor_images.execute(
-                            "SELECT imageurl FROM skins WHERE market_hash_name = ? LIMIT 1", 
+                            "SELECT imageurl FROM skins WHERE market_hash_name = ? LIMIT 1",
                             (fullname_try,)
                         )
                         row_img = cursor_images.fetchone()
                         if row_img and row_img[0] and row_img[0] != "None":
-                            suggestions.append({
-                                "market_hash_name": base_fullname,
-                                "rarity": rarity,
-                                "description": description,
-                                "need_wear": need_wear,
-                                "display_fullname": fullname_try,
-                                "display_wear": wear,
-                                "imageurl": row_img[0],
-                                "is_stattrak": False,
-                                "is_souvenir": True,
-                                "prices": get_market_prices(fullname_try)  # <-- DODAJ TO!
-                            })
+                            items_checked += 1
+                            prices = get_market_prices(fullname_try)
+                            
+                            # Użyj funkcji pomocniczej do sprawdzenia zakresu cenowego
+                            if price_in_range(prices, price_from, price_to):
+                                suggestions.append({
+                                    "market_hash_name": base_fullname,
+                                    "rarity": rarity,
+                                    "description": description,
+                                    "need_wear": need_wear,
+                                    "display_fullname": fullname_try,
+                                    "display_wear": wear,
+                                    "imageurl": row_img[0],
+                                    "is_stattrak": stattrak,
+                                    "is_souvenir": souvenir,
+                                    "prices": prices
+                                })
+                                # Natychmiast zwróć, jeśli mamy 3 sugestie
+                                if len(suggestions) >= max_suggestions:
+                                    return suggestions  # <-- DODAJ TĘ LINIĘ
+                                found_in_range = True
+                                break  # Znaleźliśmy pasujący wear, przechodzimy do następnego przedmiotu
+                        
+                        # Jeśli przekroczyliśmy limit sprawdzeń, przerwij
+                        if items_checked >= max_items_to_check:
                             break
-                    
-                    if len(suggestions) >= max_suggestions:
-                        break
+                
+                else:
+                    # Obsługa przedmiotów bez wear (need_wear=0)
+                    # Find image using helper function
+                    found_image, found_wear, fullname = find_image_for_item(
+                        cursor_images, base_fullname, need_wear, condition, stattrak, souvenir)
+                      # Add to suggestions if image found
+                    if found_image:
+                        items_checked += 1  # Zwiększ licznik sprawdzonych przedmiotów
+                        prices = get_market_prices(fullname)
+                        
+                        # Użyj funkcji pomocniczej do sprawdzenia zakresu cenowego
+                        if not price_in_range(prices, price_from, price_to):
+                            continue  # Pomiń przedmiot jeśli cena nie pasuje
+                        
+                        suggestions.append({
+                            "market_hash_name": base_fullname,
+                            "rarity": rarity,
+                            "description": description,
+                            "need_wear": need_wear,
+                            "display_fullname": fullname,
+                            "display_wear": found_wear,
+                            "imageurl": found_image,
+                            "is_stattrak": stattrak and need_wear == 1,
+                            "is_souvenir": souvenir and need_wear == 1,
+                            "prices": prices
+                        })
+                        # Natychmiast zwróć, jeśli mamy 3 sugestie
+                        if len(suggestions) >= max_suggestions:
+                            return suggestions  # <-- DODAJ TĘ LINIĘ
             
             return suggestions
             
     except Exception as e:
         return {"error": str(e)}
 
+@lru_cache(maxsize=128)
 def get_market_prices(fullname: str):
     prices = {}
     try:
@@ -342,3 +364,24 @@ def get_market_prices(fullname: str):
     except Exception as e:
         print("DB price fetch error:", e)
     return prices
+
+def price_in_range(prices, price_from, price_to):
+    """Sprawdza czy cena mieści się w zadanym zakresie"""
+    if price_from is None and price_to is None:
+        return True
+        
+    min_price = None
+    for v in prices.values():
+        if isinstance(v, (int, float)) and v is not None and v > 0:
+            if min_price is None or v < min_price:
+                min_price = v
+    
+    if min_price is None:
+        return False
+        
+    if price_from is not None and min_price < float(price_from):
+        return False
+    if price_to is not None and min_price > float(price_to):
+        return False
+    
+    return True

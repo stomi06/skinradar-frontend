@@ -27,8 +27,8 @@ const rarityStyleMap: Record<string, { colors: string[]; borderColor: string }> 
 
   'contraband':   { colors: ['rgba(217,172,70,0.2)', '#10172c'], borderColor: '#d9ac46' },
 
-  'base grade':      { colors: ['rgba(142,180,255,0.2)', '#10172c'], borderColor: '#8eb3ff' },
-  'consumer grade':  { colors: ['rgba(142,180,255,0.2)', '#10172c'], borderColor: '#8eb3ff' },
+  'base grade':      { colors: ['rgba(91,116,168,0.2)', '#10172c'], borderColor: '#5b74a8' },
+  'consumer grade':  { colors: ['rgba(91,116,168,0.2)', '#10172c'], borderColor: '#5b74a8' },
 
   'distinguished':   { colors: ['rgba(41,71,157,0.2)', '#10172c'], borderColor: '#29479d' },
   'high grade':      { colors: ['rgba(41,71,157,0.2)', '#10172c'], borderColor: '#29479d' },
@@ -37,7 +37,6 @@ const rarityStyleMap: Record<string, { colors: string[]; borderColor: string }> 
 
 const ItemAdd: React.FC<ItemAddProps> = ({ username, avatar, onLogout, onNavigateToList }) => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [itemName, setItemName] = useState('');
   const [selectedType, setSelectedType] = useState('');
   const [condition, setCondition] = useState('');
@@ -48,14 +47,20 @@ const ItemAdd: React.FC<ItemAddProps> = ({ username, avatar, onLogout, onNavigat
   const [isLoading, setIsLoading] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [openPricesIndex, setOpenPricesIndex] = useState<number | null>(null);
+  const [priceFrom, setPriceFrom] = useState('');
+  const [priceTo, setPriceTo] = useState('');
+  const [noMatchesError, setNoMatchesError] = useState('');
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
-  const toggleUserMenu = () => setIsUserMenuOpen(!isUserMenuOpen);
 
   const handleLogout = () => {
     if (window.confirm('Czy na pewno chcesz się wylogować?')) {
       onLogout();
     }
+  };
+
+  const navigateToAddItem = () => {
+    setIsMenuOpen(false);
   };
 
   const handleSearch = async () => {
@@ -89,15 +94,42 @@ const ItemAdd: React.FC<ItemAddProps> = ({ username, avatar, onLogout, onNavigat
     if (isSouvenir) {
       queryParams.append('souvenir', 'true');
     }
+    if (priceFrom) {
+      queryParams.append('price_from', priceFrom);
+    }
+    if (priceTo) {
+      queryParams.append('price_to', priceTo);
+    }
 
     fetch(`https://skinradar-d0a6bmd2a3c6dbde.northeurope-01.azurewebsites.net/suggestions?${queryParams.toString()}`)
       .then((response) => response.json())
       .then((data) => {
+        setNoMatchesError('');
+        // Jeśli backend zwrócił błąd
+        if (data.length === 1 && data[0].error) {
+          setNoMatchesError(data[0].error);
+          setShowSuggestions(false);
+          setIsLoading(false);
+          return;
+        }
+
         const newSuggestions: any[] = [];
         for (const suggestion of data) {
           if (suggestion.imageurl) {
             newSuggestions.push(suggestion);
           }
+        }
+
+        // Dodaj sprawdzenie, czy lista sugestii jest pusta
+        if (newSuggestions.length === 0) {
+          if (priceFrom || priceTo) {
+            setNoMatchesError(`No matching items were found within the specified price range. Please provide more specific search parameters or adjust the price range.`);
+          } else {
+            setNoMatchesError("No matching items were found. Please provide more specific search parameters.");
+          }
+          setShowSuggestions(false);
+          setIsLoading(false);
+          return;
         }
 
         // Czekaj aż wszystkie obrazy się załadują
@@ -131,38 +163,51 @@ const ItemAdd: React.FC<ItemAddProps> = ({ username, avatar, onLogout, onNavigat
 
   return (
     <div className="container">
+      <div
+      style={{
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        inset: 0,
+        zIndex: 0,
+        pointerEvents: 'none',
+        background: 'url("/assets/graf2.jpg") center center / cover no-repeat',
+        opacity: 0.015,
+        animation: 'none'
+      }}
+      aria-hidden="true"
+      />
       <div className="menu">
         <div className="menu-inner">
           <button onClick={toggleMenu} className="menu-icon" style={{ background: 'none', border: 'none' }}>
             <img src="/assets/menu.png" alt="menu"/>
           </button>
-          <button onClick={toggleUserMenu} className="avatar" style={{ background: 'none', border: 'none', padding: 0 }}>
-            <img src={avatar} alt="avatar"/>
-          </button>
+          <img src="/assets/skinradar.png" alt="logo" className="logo"/>
         </div>
       </div>
-      <div className="scroll-container">
-        {isMenuOpen && (
-          <div className="dropdown-menu">
-            <button className="dropdown-button" onClick={() => { setIsMenuOpen(false); onNavigateToList(); }}>
-              <span className="dropdown-button-text">LISTA</span>
-            </button>
-            <button className="dropdown-button" onClick={() => setIsMenuOpen(false)}>
-              <span className="dropdown-button-text">DODAJ</span>
-            </button>
+      <div className={`dropdown-menu${isMenuOpen ? ' dropdown-menu-visible' : ''}`}>
+          <div className="user-menu-section">
+              <img src={avatar} alt="avatar" className="user-menu-avatar" />
+              <div className="user-menu-info">
+                <div className="user-menu-name">
+                  <span className="user-menu-text">{username}</span>
+                  <button className="logout-button" onClick={handleLogout}>
+                    <img src="/assets/logout.png" alt="logout" className="logout-icon" />
+                  </button>
+                </div>
+                <span className='user-sub'>PREMIUM</span>
+              </div>
           </div>
-        )}
-
-        {isUserMenuOpen && (
-          <div className="user-menu">
-            <span className="user-menu-text">{username}</span>
-            <button className="logout-button" onClick={handleLogout}>
-              <img src="/assets/logout.png" alt="logout" className="logout-icon" />
-            </button>
-          </div>
-        )}
-
-        {/* Nowy przewijalny obszar */}
+          <button className="dropdown-button" onClick={onNavigateToList}>
+            <img src="/assets/eye.png" className="dropdown-icon"/>
+            <span className="dropdown-button-text">LIST</span>
+          </button>
+          <button className="dropdown-button" onClick={navigateToAddItem}>
+            <img src="/assets/add.png" className="dropdown-icon"/>
+            <span className="dropdown-button-text">SEARCH</span>
+          </button>
+        </div>
+      <div className={`scroll-container${isMenuOpen ? ' scroll-container-dropdown-open' : ''}`}>
         <div className="main-content">
           <div className="search-container">
             <div className="input-row">
@@ -210,6 +255,28 @@ const ItemAdd: React.FC<ItemAddProps> = ({ username, avatar, onLogout, onNavigat
                     </button>
                   ))}
                 </div>
+                {/* Nowa sekcja filtrów cenowych */}
+                <div className="price-filter-row">
+                  <div className="price-filter-label">Price:</div>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="od"
+                    className="price-filter-input"
+                    value={priceFrom}
+                    onChange={e => setPriceFrom(e.target.value)}
+                  />
+                  <span className="price-filter-separator">-</span>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="do"
+                    className="price-filter-input"
+                    value={priceTo}
+                    onChange={e => setPriceTo(e.target.value)}
+                  />
+                  <span className="price-filter-currency">$</span>
+                </div>
               </div>
             <button className="search-button" onClick={handleSearch}>
               <span className="search-button-text">Search</span>
@@ -221,20 +288,25 @@ const ItemAdd: React.FC<ItemAddProps> = ({ username, avatar, onLogout, onNavigat
               <div className="loader"></div>
             </div>
           )}
+          {noMatchesError && !isLoading && (
+            <div className="no-matches-error">
+              {noMatchesError}
+            </div>
+          )}
           <div className={`suggestions-container${showSuggestions && !isLoading ? ' suggestions-container-visible' : ''}`}>
             {showSuggestions && !isLoading && (
               <div className={`suggestions-container${showSuggestions ? ' suggestions-container-visible' : ''}`}>
                 {suggestions.map((suggestion, index) => {
                   const csfloatLink = (name: string) => `https://csfloat.com/search?sort_by=lowest_price&type=buy_now&market_hash_name=${encodeURIComponent(name)}`;
                   const bitskinsLink = (name: string) => `https://bitskins.com/market/cs2?search={%22order%22:[{%22field%22:%22price%22,%22order%22:%22ASC%22}],%22where%22:{%22skin_name%22:%22${encodeURIComponent(name)}%22}}`;
-                  const skinportLink = (name: string) => `https://skinport.com/pl/market?search=${encodeURIComponent(name)}&sort=price&order=asc`;
+                  const skinportLink = (name: string) => `https://skinport.com/pl/market?search=${encodeURIComponent(name)}`;
                   const waxpeerLink = (name: string) => `https://waxpeer.com/pl?sort=ASC&order=price&all=0&exact=0&search=${encodeURIComponent(name)}`;
 
                   const priceObjs = [
                     { market: 'csfloat', value: suggestion.prices?.csfloat, link: csfloatLink(suggestion.display_fullname) },
-                    { market: 'bitskins', value: suggestion.prices?.bitskins, link: bitskinsLink(suggestion.market_hash_name) },
-                    { market: 'skinport', value: suggestion.prices?.skinport, link: skinportLink(suggestion.market_hash_name) },
-                    { market: 'waxpeer', value: suggestion.prices?.waxpeer, link: waxpeerLink(suggestion.market_hash_name) }
+                    { market: 'bitskins', value: suggestion.prices?.bitskins, link: bitskinsLink(suggestion.display_fullname) },
+                    { market: 'skinport', value: suggestion.prices?.skinport, link: skinportLink(suggestion.display_fullname) },
+                    { market: 'waxpeer', value: suggestion.prices?.waxpeer, link: waxpeerLink(suggestion.display_fullname) }
                   ].filter(p => typeof p.value === 'number' && !isNaN(p.value));
 
                   const minObj = priceObjs.length > 0
@@ -245,7 +317,7 @@ const ItemAdd: React.FC<ItemAddProps> = ({ username, avatar, onLogout, onNavigat
                   const name = suggestion.display_fullname ?? suggestion.market_hash_name;
 
                   const gradient15 = rarityStyle
-                    ? `linear-gradient(90deg, ${rarityStyle.colors[0]} 0%, #10172c 20%)`
+                    ? `linear-gradient(90deg, ${rarityStyle.colors[0]} 0%, #10172c 2%)`
                     : '';
                   const gradient50 = rarityStyle
                     ? `linear-gradient(90deg, ${rarityStyle.colors[0]} 0%, #10172c 40%)`
@@ -279,9 +351,15 @@ const ItemAdd: React.FC<ItemAddProps> = ({ username, avatar, onLogout, onNavigat
                       )}
                       {/* Prefix */}
                       <div className="suggestion-info">
-                        {name.startsWith('StatTrak™ ') && <span className="suggestion-prefix">StatTrak™</span>}
-                        {name.startsWith('Souvenir ') && <span className="suggestion-prefix">Souvenir</span>}
-                        {name.startsWith('★ StatTrak™ ') && <span className="suggestion-prefix">StatTrak™</span>}
+                        {name.startsWith('StatTrak™ ') && (
+                          <span className="suggestion-prefix suggestion-prefix-stattrak">StatTrak™</span>
+                        )}
+                        {name.startsWith('Souvenir ') && (
+                          <span className="suggestion-prefix suggestion-prefix-souvenir">Souvenir</span>
+                        )}
+                        {name.startsWith('★ StatTrak™ ') && (
+                          <span className="suggestion-prefix suggestion-prefix-stattrak">StatTrak™</span>
+                        )}
                         <span className="suggestion-text">
                           {name
                             .replace(/^StatTrak™ /, '')
@@ -321,23 +399,35 @@ const ItemAdd: React.FC<ItemAddProps> = ({ username, avatar, onLogout, onNavigat
                         </a>
                       </div>
                       <div className="suggestion-prices" style={{opacity: openPricesIndex === index ? 1 : 0, visibility: openPricesIndex === index ? "visible" : "hidden"}} onClick={() => setOpenPricesIndex(null)}>
-                        <div className='prices-container' onClick={e => e.stopPropagation()}>
-                          <div>
-                            <img src="assets/csfloat.png" alt="CSFloat"/>
-                            CSFloat: ${suggestion.prices?.csfloat ?? 'N/A'}
-                          </div>
-                          <div>
-                            <img src="assets/bitskins.png" alt="BitSkins"/>
-                            BitSkins: ${suggestion.prices?.bitskins ?? 'N/A'}
-                          </div>
-                          <div>
-                            <img src="assets/skinport.png" alt="SkinPort"/>
-                            SkinPort: ${suggestion.prices?.skinport ?? 'N/A'}
-                          </div>
-                          <div>
-                            <img src="assets/waxpeer.png" alt="Waxpeer"/>
-                            Waxpeer: ${suggestion.prices?.waxpeer ?? 'N/A'}
-                          </div>
+                        <div className="prices-container" onClick={e => e.stopPropagation()}>
+                          <a href={csfloatLink(suggestion.display_fullname)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                            <div className="price-market">
+                              <img src="assets/csfloat.png" alt="CSFloat" className="price-market-img" />
+                              <span className="price-label">CSFloat:</span>
+                              <span className="price-value">${suggestion.prices?.csfloat ?? 'N/A'}</span>
+                            </div>
+                          </a>
+                          <a href={bitskinsLink(suggestion.display_fullname)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                            <div className="price-market">
+                              <img src="assets/bitskins.png" alt="BitSkins" className="price-market-img" />
+                              <span className="price-label">BitSkins:</span>
+                              <span className="price-value">${suggestion.prices?.bitskins ?? 'N/A'}</span>
+                            </div>
+                          </a>
+                          <a href={skinportLink(suggestion.display_fullname)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                            <div className="price-market">
+                              <img src="assets/skinport.png" alt="SkinPort" className="price-market-img" />
+                              <span className="price-label">SkinPort:</span>
+                              <span className="price-value">${suggestion.prices?.skinport ?? 'N/A'}</span>
+                            </div>
+                          </a>
+                          <a href={waxpeerLink(suggestion.display_fullname)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                            <div className="price-market">
+                              <img src="assets/waxpeer.png" alt="Waxpeer" className="price-market-img" />
+                              <span className="price-label">Waxpeer:</span>
+                              <span className="price-value">${suggestion.prices?.waxpeer ?? 'N/A'}</span>
+                            </div>
+                          </a>
                         </div>
                       </div>
                     </div>

@@ -10,3 +10,5 @@ backend/.env.local
 backend/.env.production
 backend/.env.backup
 config_backups/
+node_modules/
+package-lock.json

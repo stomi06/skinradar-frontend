@@ -1,7 +1,0 @@
-# filepath: c:\Users\Michał\Desktop\skinradar1\netlify.toml
-[build]
-  command = "npm run build"
-  publish = "build"
-  
-[build.environment]
-  NODE_VERSION = "18"
