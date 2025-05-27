@@ -121,7 +121,7 @@ const ItemAdd: React.FC<ItemAddProps> = ({
     if (priceTo) queryParams.append('price_to', priceTo);
 
     try {
-      const response = await fetch(`http://192.168.55.9:8000/suggestions?${queryParams.toString()}`);
+      const response = await fetch(`https://skinradar-d0a6bmd2a3c6dbde.northeurope-01.azurewebsites.net/suggestions?${queryParams.toString()}`);
       const data = await response.json();
       
       updateState({ noMatchesError: '' });
