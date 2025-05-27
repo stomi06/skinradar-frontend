@@ -7,6 +7,7 @@ import aiohttp
 import asyncpg
 import re
 from dotenv import load_dotenv
+import datetime
 
 # Załaduj zmienne środowiskowe
 load_dotenv()
@@ -75,17 +76,30 @@ async def steam_callback(request: Request):
     
     conn = await get_db_connection()
     try:
-        existing_user = await conn.fetchval(
-            'SELECT steam_id FROM user_ids WHERE steam_id = $1',
+        await conn.execute(
+            '''
+            INSERT INTO user_ids (steam_id, username, first_login)
+            VALUES ($1, $2, $3)
+            ON CONFLICT (steam_id) DO UPDATE
+            SET username = EXCLUDED.username
+            ''',
+            steam_id,
+            user_info['personaname'],
+            datetime.datetime.utcnow()
+        )
+        # Pobierz first_login z bazy (zawsze aktualny, nie nadpisany)
+        first_login = await conn.fetchval(
+            'SELECT first_login FROM user_ids WHERE steam_id = $1',
             steam_id
         )
-        if not existing_user:
-            await conn.execute(
-                'INSERT INTO user_ids (steam_id) VALUES ($1)',
-                steam_id
-            )
     finally:
         await conn.close()
-    
-    redirect_url = f"{MOBILE_REDIRECT_URL}username={user_info['personaname']}&avatar={user_info['avatarfull']}&steamid={steam_id}"
+
+    redirect_url = (
+        f"{MOBILE_REDIRECT_URL}"
+        f"username={user_info['personaname']}"
+        f"&avatar={user_info['avatarfull']}"
+        f"&steamid={steam_id}"
+        f"&first_login={first_login.date() if hasattr(first_login, 'date') else first_login}"
+    )
     return RedirectResponse(url=redirect_url)

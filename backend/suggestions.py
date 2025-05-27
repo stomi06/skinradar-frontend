@@ -13,7 +13,6 @@ router = APIRouter()
 
 wear_levels = ["Factory New", "Minimal Wear", "Field-Tested", "Well-Worn", "Battle-Scarred"]
 
-# Use LRU cache to avoid recalculating similarity for the same inputs
 @lru_cache(maxsize=1024)
 def normalize_text(text: str) -> str:
     text = text.lower()
@@ -83,10 +82,8 @@ def find_image_for_item(cursor, base_fullname: str, need_wear: int, condition: s
     """Find image URL for an item based on name and condition"""
     prefix = ""
     if is_stattrak and need_wear == 1:
-        # Jeśli to nóż (czyli base_fullname zaczyna się od "★" lub zawiera "Knife")
         if base_fullname.startswith("★") or "Knife" in base_fullname:
             prefix = "★ StatTrak™ "
-            # Usuń istniejącą gwiazdkę z base_fullname, żeby nie było dwóch
             base_fullname = base_fullname.replace("★ ", "")
         else:
             prefix = "StatTrak™ "
@@ -99,7 +96,6 @@ def find_image_for_item(cursor, base_fullname: str, need_wear: int, condition: s
     found_wear = None
     
     if need_wear == 1:
-        # Start from specified condition or Factory New
         start_index = wear_levels.index(condition) if condition in wear_levels else 0
         for i in range(start_index, len(wear_levels)):
             fullname_try = f"{base_fullname_with_prefix} ({wear_levels[i]})"
@@ -112,7 +108,6 @@ def find_image_for_item(cursor, base_fullname: str, need_wear: int, condition: s
                 fullname = fullname_try
                 break
     elif need_wear == 0:
-        # First try with condition if specified
         if condition in wear_levels:
             fullname_try = f"{base_fullname_with_prefix} ({condition})"
             cursor.execute("SELECT imageurl FROM skins WHERE market_hash_name = ? LIMIT 1", 
@@ -123,7 +118,6 @@ def find_image_for_item(cursor, base_fullname: str, need_wear: int, condition: s
                 found_wear = condition
                 fullname = fullname_try
         
-        # If not found, try without condition
         if not found_image:
             cursor.execute("SELECT imageurl FROM skins WHERE market_hash_name = ? LIMIT 1", 
                          (base_fullname_with_prefix,))
@@ -143,200 +137,6 @@ def get_image(fullname: str):
             cursor.execute("SELECT imageurl FROM skins WHERE market_hash_name = ? LIMIT 1", (fullname,))
             row = cursor.fetchone()
             return {"imageurl": row[0] if row else None}
-    except Exception as e:
-        return {"error": str(e)}
-
-@router.get("/suggestions")
-def get_suggestions(
-    query: str, 
-    condition: str = "", 
-    stattrak: bool = False, 
-    souvenir: bool = False,
-    price_from: float = Query(None),
-    price_to: float = Query(None)
-):
-    # Quick validation
-    if not query or len(query.strip()) < 2:
-        return []
-    
-    needs_wear_filter = stattrak or souvenir or (condition in wear_levels)
-    
-    try:
-        # Use context managers for DB connections to ensure proper cleanup
-        with sqlite3.connect("all_items.db") as conn_items, sqlite3.connect("images.db") as conn_images:
-            cursor_items = conn_items.cursor()
-            cursor_images = conn_images.cursor()
-            
-            # Prepare SQL for initial item selection with better filtering
-            if len(query.strip()) <= 6:
-                # For short queries, try direct SQL match first
-                sql_params = []
-                if needs_wear_filter:
-                    sql_where = "need_wear = 1 AND LOWER(market_hash_name) LIKE ?"
-                else:
-                    sql_where = "LOWER(market_hash_name) LIKE ?"
-                sql_params.append(f'%{query.lower()}%')
-                
-                cursor_items.execute(
-                    f"SELECT market_hash_name, rarity, description, need_wear FROM items WHERE {sql_where} LIMIT 50",
-                    sql_params
-                )
-                direct_matches = cursor_items.fetchall()
-                
-                if len(direct_matches) >= 5:
-                    rows = direct_matches
-                else:
-                    # Fallback to filtered query if direct matches not sufficient
-                    sql_where = "need_wear = 1" if needs_wear_filter else "1=1"
-                    cursor_items.execute(
-                        f"SELECT market_hash_name, rarity, description, need_wear FROM items WHERE {sql_where}"
-                    )
-                    rows = cursor_items.fetchall()
-            else:
-                # For longer queries, use filtered query directly
-                sql_where = "need_wear = 1" if needs_wear_filter else "1=1"
-                cursor_items.execute(
-                    f"SELECT market_hash_name, rarity, description, need_wear FROM items WHERE {sql_where}"
-                )
-                rows = cursor_items.fetchall()
-            
-            # Calculate similarity scores
-            items_with_similarity = []
-            for row in rows:
-                base_fullname, _, _, need_wear = row
-                
-                # Skip items that can't have StatTrak/Souvenir when selected
-                if (stattrak or souvenir) and need_wear != 1:
-                    continue
-                
-                similarity = calculate_similarity(query, base_fullname)
-                
-                # Different thresholds for different scenarios
-                threshold = 0.2 if souvenir and len(query.strip()) <= 5 else \
-                           0.25 if souvenir or len(query.strip()) <= 5 else 0.3
-                
-                if similarity > threshold:
-                    # Bonus for Souvenir items
-                    if souvenir:
-                        similarity += 0.1
-                    items_with_similarity.append((row, similarity))
-            
-            # Sort by similarity (most similar first)
-            items_with_similarity.sort(key=lambda x: x[1], reverse=True)
-            
-            # Take top N matches based on search type
-            best_matches_count = 200 if (price_from is not None or price_to is not None) else (30 if souvenir else 10)
-            best_matches = items_with_similarity[:best_matches_count]
-            
-            # Build suggestions list
-            suggestions = []
-            max_suggestions = 3
-            items_checked = 0
-            max_items_to_check = 50
-            
-            # Find images for top matches
-            for match_data, _ in best_matches:
-                if items_checked >= max_items_to_check:
-                    break
-                    
-                base_fullname, rarity, description, need_wear = match_data
-                
-                # Jeśli need_wear=1, sprawdź wszystkie wear dla tego przedmiotu
-                if need_wear == 1:
-                    # Jeśli podano konkretny wear, sprawdzaj TYLKO ten wear
-                    if condition in wear_levels:
-                        possible_wears = [condition]  # Używaj tylko wybranego wear!
-                    else:
-                        # Brak wybranego wear - sprawdź wszystkie
-                        possible_wears = wear_levels
-                    
-                    found_in_range = False
-                    
-                    # Sprawdź każdy możliwy wear dla tego przedmiotu
-                    for wear in possible_wears:
-                        # Tworzenie nazwy z odpowiednim prefixem
-                        prefix = ""
-                        if stattrak:
-                            if base_fullname.startswith("★") or "Knife" in base_fullname:
-                                prefix = "★ StatTrak™ "
-                                clean_base = base_fullname.replace("★ ", "")
-                            else:
-                                prefix = "StatTrak™ "
-                                clean_base = base_fullname
-                        elif souvenir:
-                            prefix = "Souvenir "
-                            clean_base = base_fullname
-                        else:
-                            clean_base = base_fullname
-                            
-                        fullname_try = f"{prefix}{clean_base} ({wear})"
-                        
-                        # Sprawdź czy mamy obrazek
-                        cursor_images.execute(
-                            "SELECT imageurl FROM skins WHERE market_hash_name = ? LIMIT 1",
-                            (fullname_try,)
-                        )
-                        row_img = cursor_images.fetchone()
-                        if row_img and row_img[0] and row_img[0] != "None":
-                            items_checked += 1
-                            prices = get_market_prices(fullname_try)
-                            
-                            # Użyj funkcji pomocniczej do sprawdzenia zakresu cenowego
-                            if price_in_range(prices, price_from, price_to):
-                                suggestions.append({
-                                    "market_hash_name": base_fullname,
-                                    "rarity": rarity,
-                                    "description": description,
-                                    "need_wear": need_wear,
-                                    "display_fullname": fullname_try,
-                                    "display_wear": wear,
-                                    "imageurl": row_img[0],
-                                    "is_stattrak": stattrak,
-                                    "is_souvenir": souvenir,
-                                    "prices": prices
-                                })
-                                # Natychmiast zwróć, jeśli mamy 3 sugestie
-                                if len(suggestions) >= max_suggestions:
-                                    return suggestions  # <-- DODAJ TĘ LINIĘ
-                                found_in_range = True
-                                break  # Znaleźliśmy pasujący wear, przechodzimy do następnego przedmiotu
-                        
-                        # Jeśli przekroczyliśmy limit sprawdzeń, przerwij
-                        if items_checked >= max_items_to_check:
-                            break
-                
-                else:
-                    # Obsługa przedmiotów bez wear (need_wear=0)
-                    # Find image using helper function
-                    found_image, found_wear, fullname = find_image_for_item(
-                        cursor_images, base_fullname, need_wear, condition, stattrak, souvenir)
-                      # Add to suggestions if image found
-                    if found_image:
-                        items_checked += 1  # Zwiększ licznik sprawdzonych przedmiotów
-                        prices = get_market_prices(fullname)
-                        
-                        # Użyj funkcji pomocniczej do sprawdzenia zakresu cenowego
-                        if not price_in_range(prices, price_from, price_to):
-                            continue  # Pomiń przedmiot jeśli cena nie pasuje
-                        
-                        suggestions.append({
-                            "market_hash_name": base_fullname,
-                            "rarity": rarity,
-                            "description": description,
-                            "need_wear": need_wear,
-                            "display_fullname": fullname,
-                            "display_wear": found_wear,
-                            "imageurl": found_image,
-                            "is_stattrak": stattrak and need_wear == 1,
-                            "is_souvenir": souvenir and need_wear == 1,
-                            "prices": prices
-                        })
-                        # Natychmiast zwróć, jeśli mamy 3 sugestie
-                        if len(suggestions) >= max_suggestions:
-                            return suggestions  # <-- DODAJ TĘ LINIĘ
-            
-            return suggestions
-            
     except Exception as e:
         return {"error": str(e)}
 
@@ -379,9 +179,418 @@ def price_in_range(prices, price_from, price_to):
     if min_price is None:
         return False
         
-    if price_from is not None and min_price < float(price_from):
-        return False
-    if price_to is not None and min_price > float(price_to):
-        return False
+    if price_from is not None and price_from != "":
+        try:
+            price_from_float = float(price_from)
+            if min_price < price_from_float:
+                return False
+        except (ValueError, TypeError):
+            pass
+            
+    if price_to is not None and price_to != "":
+        try:
+            price_to_float = float(price_to)
+            if min_price > price_to_float:
+                return False
+        except (ValueError, TypeError):
+            pass
     
     return True
+
+def clean_base_name(market_hash_name: str) -> str:
+    """Usuwa prefixy StatTrak/Souvenir/★ oraz wear z market_hash_name"""
+    base_name = market_hash_name.strip()
+    for prefix in ['★ StatTrak™ ', 'StatTrak™ ', 'Souvenir ', '★ ']:
+        if base_name.startswith(prefix):
+            base_name = base_name[len(prefix):]
+            break
+    for wear in wear_levels:
+        pattern = f' ({wear})'
+        if base_name.endswith(pattern):
+            base_name = base_name[:-len(pattern)]
+            break
+    return base_name.strip()
+
+def build_fuzzy_search_query(query: str, sort_by: str = "lowest"):
+    """Buduje zapytanie fuzzy search z obsługą literówek"""
+    price_field = "MIN(p.min_price)" if sort_by == "lowest" else "MAX(p.min_price)"
+    order_clause = "ASC" if sort_by == "lowest" else "DESC"
+    
+    base_query = f"""
+    SELECT DISTINCT p.market_hash_name, {price_field} as price,
+           CASE WHEN p.market_hash_name ILIKE %s THEN 1 ELSE 0 END as exact_match_score
+    FROM prices p WHERE p.min_price IS NOT NULL AND p.min_price > 0
+    """
+    params = [f"%{query}%"]    
+    if len(query.strip()) <= 3:
+        base_query += " AND p.market_hash_name ILIKE %s"
+        params.append(f"%{query.strip()}%")
+    else:
+        # Handle typos for single words, AND logic for multiple words
+        query_words = query.strip().split()
+        if len(query_words) == 1:
+            word = query_words[0]
+            typo_variants = [f"%{word}%", f"%{word[:-1]}%", f"%{word[1:]}%"]
+            
+            if len(word) >= 3:
+                for i in range(len(word)):
+                    typo_variants.append(f"%{word[:i] + word[i] + word[i:]}%")
+                no_doubles = re.sub(r'(.)\1+', r'\1', word)
+                if no_doubles != word:
+                    typo_variants.append(f"%{no_doubles}%")
+            
+            typo_variants = typo_variants[:10]
+            base_query += f" AND ({' OR '.join(['p.market_hash_name ILIKE %s'] * len(typo_variants))})"
+            params.extend(typo_variants)
+        else:
+            # Multiple words - all must be present
+            conditions = [f"p.market_hash_name ILIKE %s" for _ in query_words]
+            base_query += f" AND ({' AND '.join(conditions)})"
+            params.extend([f"%{word}%" for word in query_words])
+    
+    return base_query, params, order_clause
+
+def get_price_suggestions_fuzzy(
+    query: str, 
+    condition: str = "", 
+    stattrak: bool = False, 
+    souvenir: bool = False,
+    price_from: float = None,
+    price_to: float = None,
+    limit: int = 50,
+    sort_by: str = "lowest"
+):
+    """Zoptymalizowana funkcja fuzzy search z pełnym filtrowaniem"""
+    try:
+        conn = psycopg2.connect(
+            dbname=os.getenv('DB_NAME2'),
+            user=os.getenv('DB_USER'),
+            password=os.getenv('DB_PASSWORD'),
+            host=os.getenv('DB_HOST'),
+            port=os.getenv('DB_PORT')
+        )
+        cursor = conn.cursor()
+        
+        # Zoptymalizowane zapytanie - pobiera wszystkie ceny od razu
+        base_query = """
+        SELECT p.market_hash_name, 
+               MIN(CASE WHEN p.source = 'csfloat' THEN p.min_price END) as csfloat_price,
+               MIN(CASE WHEN p.source = 'bitskins' THEN p.min_price END) as bitskins_price,
+               MIN(CASE WHEN p.source = 'skinport' THEN p.min_price END) as skinport_price,
+               MIN(CASE WHEN p.source = 'waxpeer' THEN p.min_price END) as waxpeer_price,
+               MIN(p.min_price) as min_price
+        FROM prices p 
+        WHERE p.min_price IS NOT NULL AND p.min_price > 0
+        """
+        params = []
+        
+        # Obsługa literówek - skopiowana z build_fuzzy_search_query
+        if len(query.strip()) <= 3:
+            base_query += " AND p.market_hash_name ILIKE %s"
+            params.append(f"%{query.strip()}%")
+        else:
+            query_words = query.strip().split()
+            if len(query_words) == 1:
+                word = query_words[0]
+                typo_variants = [f"%{word}%", f"%{word[:-1]}%", f"%{word[1:]}%"]
+                
+                if len(word) >= 3:
+                    for i in range(len(word)):
+                        typo_variants.append(f"%{word[:i] + word[i] + word[i:]}%")
+                    no_doubles = re.sub(r'(.)\1+', r'\1', word)
+                    if no_doubles != word:
+                        typo_variants.append(f"%{no_doubles}%")
+                
+                typo_variants = typo_variants[:8]  # Ograniczenie dla wydajności
+                base_query += f" AND ({' OR '.join(['p.market_hash_name ILIKE %s'] * len(typo_variants))})"
+                params.extend(typo_variants)
+            else:
+                conditions = [f"p.market_hash_name ILIKE %s" for _ in query_words]
+                base_query += f" AND ({' AND '.join(conditions)})"
+                params.extend([f"%{word}%" for word in query_words])
+        
+        # Filtry dla StatTrak/Souvenir
+        if stattrak:
+            base_query += " AND (p.market_hash_name ILIKE %s OR p.market_hash_name ILIKE %s)"
+            params.extend(['%StatTrak™%', '%★ StatTrak™%'])
+        elif souvenir:
+            base_query += " AND p.market_hash_name ILIKE %s"
+            params.append('Souvenir %')
+        else:
+            base_query += " AND p.market_hash_name NOT ILIKE %s AND p.market_hash_name NOT ILIKE %s AND p.market_hash_name NOT ILIKE %s"
+            params.extend(['%StatTrak™%', '%★ StatTrak™%', 'Souvenir %'])
+        
+        # FILTR KONDYCJI - WAŻNE! To było usunięte!
+        if condition and condition in wear_levels:
+            base_query += " AND p.market_hash_name ILIKE %s"
+            params.append(f'%({condition})%')
+        
+        # Grupuj po market_hash_name
+        base_query += " GROUP BY p.market_hash_name"
+        
+        # Filtrowanie cenowe w SQL
+        if price_from is not None and price_from != "":
+            try:
+                base_query += " HAVING MIN(p.min_price) >= %s"
+                params.append(float(price_from))
+            except (ValueError, TypeError):
+                pass
+                
+        if price_to is not None and price_to != "":
+            try:
+                having_clause = " HAVING MIN(p.min_price) <= %s" if "HAVING" not in base_query else " AND MIN(p.min_price) <= %s"
+                base_query += having_clause
+                params.append(float(price_to))
+            except (ValueError, TypeError):
+                pass
+        
+        # Sortowanie w SQL
+        order_clause = "DESC" if sort_by == "highest" else "ASC"
+        base_query += f" ORDER BY min_price {order_clause} LIMIT 100"
+        
+        cursor.execute(base_query, params)
+        price_results = cursor.fetchall()
+        cursor.close()
+        conn.close()
+        
+        # Grupuj przedmioty po base_name i znajdź najlepsze ceny
+        item_price_map = {}
+        
+        for row in price_results:
+            market_hash_name = row[0]
+            csfloat_price = row[1]
+            bitskins_price = row[2] 
+            skinport_price = row[3]
+            waxpeer_price = row[4]
+            min_price = row[5]
+            
+            base_name = clean_base_name(market_hash_name)
+            
+            # Sprawdź similarity
+            similarity = calculate_similarity(query, base_name)
+            if similarity < 0.15:  # Obniżony threshold dla lepszego wyszukiwania
+                continue
+            
+            # Jeśli ten base_name już istnieje, porównaj ceny
+            if base_name in item_price_map:
+                existing_min_price = item_price_map[base_name]['min_price']
+                
+                if sort_by == "highest":
+                    if min_price <= existing_min_price:
+                        continue
+                else:
+                    if min_price >= existing_min_price:
+                        continue
+            
+            # Stwórz obiekt prices
+            all_prices = {
+                'csfloat': csfloat_price,
+                'bitskins': bitskins_price,
+                'skinport': skinport_price,
+                'waxpeer': waxpeer_price
+            }
+            
+            item_price_map[base_name] = {
+                'market_hash_name': market_hash_name,
+                'min_price': min_price,
+                'all_prices': all_prices,
+                'similarity': similarity
+            }
+            
+            # Early exit - jeśli mamy już 10 przedmiotów, przestajemy przetwarzać
+            if len(item_price_map) >= 10:
+                break
+        
+        # Posortuj po cenach i weź tylko 3 najlepsze
+        sorted_items = sorted(
+            item_price_map.items(), 
+            key=lambda x: x[1]['min_price'], 
+            reverse=(sort_by == "highest")
+        )[:3]
+        
+        # Buduj suggestions - batch queries dla lepszej wydajności
+        suggestions = []
+        if sorted_items:
+            with sqlite3.connect("images.db") as conn_images, sqlite3.connect("all_items.db") as conn_items:
+                cursor_images = conn_images.cursor()
+                cursor_items = conn_items.cursor()
+                
+                # Batch query dla obrazków
+                market_hash_names = [item_data['market_hash_name'] for _, item_data in sorted_items]
+                image_placeholders = ','.join(['?' for _ in market_hash_names])
+                cursor_images.execute(
+                    f"SELECT market_hash_name, imageurl FROM skins WHERE market_hash_name IN ({image_placeholders}) AND imageurl IS NOT NULL AND imageurl != 'None'",
+                    market_hash_names
+                )
+                images_map = {row[0]: row[1] for row in cursor_images.fetchall()}
+                
+                # Batch query dla metadanych
+                base_names = [base_name for base_name, _ in sorted_items]
+                metadata_placeholders = ','.join(['?' for _ in base_names])
+                cursor_items.execute(
+                    f"SELECT market_hash_name, rarity, description, need_wear FROM items WHERE market_hash_name IN ({metadata_placeholders})",
+                    base_names
+                )
+                metadata_map = {row[0]: row[1:] for row in cursor_items.fetchall()}
+                
+                # Sprawdź też z prefiksem ★ dla brakujących
+                missing_items = [name for name in base_names if name not in metadata_map and not name.startswith("★")]
+                if missing_items:
+                    star_names = [f"★ {name}" for name in missing_items]
+                    star_placeholders = ','.join(['?' for _ in star_names])
+                    cursor_items.execute(
+                        f"SELECT market_hash_name, rarity, description, need_wear FROM items WHERE market_hash_name IN ({star_placeholders})",
+                        star_names
+                    )
+                    for row in cursor_items.fetchall():
+                        original_name = row[0][2:]  # Usuń "★ "
+                        metadata_map[original_name] = row[1:]
+                
+                for base_name, item_data in sorted_items:
+                    market_hash_name = item_data['market_hash_name']
+                    
+                    # Sprawdź czy mamy obrazek
+                    if market_hash_name in images_map:
+                        # Pobierz metadane
+                        if base_name in metadata_map:
+                            rarity, description, need_wear = metadata_map[base_name]
+                        else:
+                            rarity, description, need_wear = None, None, 1
+                        
+                        # Określ wear z pełnej nazwy
+                        display_wear = None
+                        for wear in wear_levels:
+                            if f'({wear})' in market_hash_name:
+                                display_wear = wear
+                                break
+                        
+                        is_stattrak_item = 'StatTrak™' in market_hash_name
+                        is_souvenir_item = market_hash_name.startswith('Souvenir ')
+                        
+                        suggestions.append({
+                            "market_hash_name": base_name,
+                            "rarity": rarity,
+                            "description": description,
+                            "need_wear": need_wear,
+                            "display_fullname": market_hash_name,
+                            "display_wear": display_wear,
+                            "imageurl": images_map[market_hash_name],
+                            "is_stattrak": is_stattrak_item,
+                            "is_souvenir": is_souvenir_item,
+                            "prices": item_data['all_prices']
+                        })
+        
+        return suggestions
+        
+    except Exception as e:
+        print(f"Error in fuzzy search: {e}")
+        return []
+
+@lru_cache(maxsize=256)
+def get_price_suggestions_cached(query, condition, stattrak, souvenir, price_from, price_to, sort_by):
+    """Cached wrapper for price suggestions"""
+    return get_price_suggestions_fuzzy(query, condition, stattrak, souvenir, price_from, price_to, 50, sort_by)
+
+@router.get("/suggestions")
+def get_suggestions(
+    query: str, 
+    condition: str = "", 
+    stattrak: bool = False, 
+    souvenir: bool = False,
+    price_from: float = Query(None),
+    price_to: float = Query(None),
+    sort_by: str = Query("default")
+):
+    # Quick validation
+    if not query or len(query.strip()) < 2:
+        return []    # Handle price sorting with fuzzy search
+    if sort_by in ["lowest_price", "highest_price"]:
+        return get_price_suggestions_cached(
+            query, condition, stattrak, souvenir, price_from, price_to, sort_by.replace("_price", "")
+        )
+    
+    needs_wear_filter = stattrak or souvenir or (condition in wear_levels)
+    threshold = 0.2 if souvenir and len(query.strip()) <= 5 else \
+               0.25 if souvenir or len(query.strip()) <= 5 else 0.3
+    
+    try:
+        with sqlite3.connect("all_items.db") as conn_items, sqlite3.connect("images.db") as conn_images:
+            cursor_items = conn_items.cursor()
+            cursor_images = conn_images.cursor()
+            
+            # Get items based on query length
+            if len(query.strip()) <= 6:
+                sql_where = "need_wear = 1 AND LOWER(market_hash_name) LIKE ?" if needs_wear_filter else "LOWER(market_hash_name) LIKE ?"
+                cursor_items.execute(f"SELECT market_hash_name, rarity, description, need_wear FROM items WHERE {sql_where} LIMIT 200", [f'%{query.lower()}%'])
+                direct_matches = cursor_items.fetchall()
+                
+                if len(direct_matches) < 3:
+                    sql_where = "need_wear = 1" if needs_wear_filter else "1=1"
+                    cursor_items.execute(f"SELECT market_hash_name, rarity, description, need_wear FROM items WHERE {sql_where}")
+                    rows = cursor_items.fetchall()
+                else:
+                    rows = direct_matches
+            else:
+                sql_where = "need_wear = 1" if needs_wear_filter else "1=1"
+                cursor_items.execute(f"SELECT market_hash_name, rarity, description, need_wear FROM items WHERE {sql_where}")
+                rows = cursor_items.fetchall()
+            
+            # Calculate similarities and filter
+            items_with_similarity = []
+            for row in rows:
+                base_fullname, _, _, need_wear = row
+                
+                # Apply filters
+                if ((stattrak or souvenir) and need_wear != 1) or \
+                   (not stattrak and ('StatTrak™' in base_fullname)) or \
+                   (not souvenir and base_fullname.startswith('Souvenir ')):
+                    continue
+                
+                similarity = calculate_similarity(query, base_fullname)
+                if similarity > threshold:
+                    items_with_similarity.append((row, similarity))            # Sort by similarity and take best matches
+            items_with_similarity.sort(key=lambda x: x[1], reverse=True)
+            best_matches_count = 500 if (price_from is not None or price_to is not None) else (100 if souvenir else 50)
+            best_matches = items_with_similarity[:best_matches_count]
+            
+            # Build suggestions
+            suggestions = []
+            for match_data, similarity_score in best_matches:
+                if len(suggestions) >= 3:
+                    break
+                    
+                base_fullname, rarity, description, need_wear = match_data
+                
+                # Find appropriate wear levels to check
+                possible_wears = [condition] if (need_wear == 1 and condition in wear_levels) else \
+                               wear_levels if need_wear == 1 else [condition]
+                
+                for wear in possible_wears:
+                    found_image, found_wear, fullname = find_image_for_item(
+                        cursor_images, base_fullname, need_wear, wear, stattrak, souvenir)
+                    
+                    if found_image:
+                        prices = get_market_prices(fullname)
+                        
+                        if price_in_range(prices, price_from, price_to):
+                            suggestions.append({
+                                "market_hash_name": base_fullname,
+                                "rarity": rarity,
+                                "description": description,
+                                "need_wear": need_wear,
+                                "display_fullname": fullname,
+                                "display_wear": found_wear,
+                                "imageurl": found_image,
+                                "is_stattrak": stattrak and need_wear == 1,
+                                "is_souvenir": souvenir and need_wear == 1,
+                                "prices": prices,
+                                "similarity": similarity_score
+                            })
+                            break
+              # Sort suggestions by similarity (highest first)
+            suggestions.sort(key=lambda x: x.get("similarity", 0), reverse=True)
+            
+            return suggestions
+            
+    except Exception as e:
+        return {"error": str(e)}

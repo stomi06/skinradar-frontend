@@ -7,6 +7,32 @@ body{
   background: #10172c;
 }
 
+/* Usuń highlight na urządzeniach mobilnych */
+* {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -khtml-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Pozwól na selekcję tekstu w inputach */
+input, textarea {
+  -webkit-user-select: text;
+  -khtml-user-select: text;
+  -moz-user-select: text;
+  -ms-user-select: text;
+  user-select: text;
+}
+
+/* Alternatywnie, możesz dodać to do konkretnych elementów */
+button, .dropdown-button, .menu-icon, .filter-button, .search-button, .buy-button, .menu2-button {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-touch-callout: none;
+}
+
 .loader {
   border: 6px solid #111938;
   border-top: 6px solid #7C8BA1;
@@ -23,7 +49,7 @@ body{
 .container {
   display: flex;
   flex-direction: column;
-  min-height: calc(100vh - 120px); /* odejmij wysokość menu i menu2 */
+  min-height: calc(100dvh - 120px); /* odejmij wysokość menu i menu2 */
   background-color: #10172c;
   padding-top: 60px;    /* wysokość menu */
   padding-bottom: 60px; /* wysokość menu2 */
@@ -33,14 +59,12 @@ body{
 
 /* Gradientowe tło */
 .start-container {
-  height: 100vh;
+  height: 100dvh;
   display: flex;
   justify-content: center;
   align-items: center;
   overflow: hidden;
-  background: linear-gradient(135deg, #10172c, #1a233a, #102458);
-  background-size: 200% 200%;
-  animation: backgroundAnimation 10s ease infinite;
+  background: #10172c;
 }
 
 /* Opcjonalnie: animowane tło */
@@ -64,39 +88,20 @@ body{
   border-radius: 8px;
   border: none;
   gap: 7px;
-  background: none;
+  background: linear-gradient(120deg, #111938, #081942, #101f4b, #111938);
+  background-size: 300% 300%;
+  animation: loginBgAnimation 10s ease-in-out infinite;
   cursor: pointer;
   position: relative;
   z-index: 1;
   transition: all 0.3s ease;
+  color: #7C8BA1;
+  box-shadow: 0 1px 6px rgba(16, 31, 75, 0.4);
 }
 
-.login-button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  border-radius: 8px;
-  padding: 3px;
-  background: linear-gradient(45deg, #102458, #3f1288);
-  background-size: 200% 200%;
-  animation: borderAnimation 10s ease infinite;
-  /* Wersja dla WebKit (Safari, Chrome, Opera) */
-  -webkit-mask: 
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  -webkit-mask-composite: xor;
-  /* Standardowa wersja dla innych przeglądarek */
-  mask: 
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-  z-index: -1;
-}
+/* Usuń .login-button::before jeśli chcesz tylko animowane tło */
 
-@keyframes borderAnimation {
+@keyframes loginBgAnimation {
   0% { background-position: 0% 50%; }
   50% { background-position: 100% 50%; }
   100% { background-position: 0% 50%; }
@@ -128,13 +133,13 @@ body{
 }
 
 .logo {
-  width: 100px;
+  width: 200px;
   height: auto;
-  margin-bottom: 10px;
+  margin: 20px auto;
 }
 
 .menu-inner .logo{
-  width: 70px;
+  width: 30px;
   height: auto;
   object-fit: contain;
   margin: 0 20px 0 0;
@@ -193,17 +198,19 @@ body{
   color: #7C8BA1;
 }
 
-
 .scroll-container {
-  flex: 1 1 auto;
+  position: relative;
+  display: flex;
+  flex-direction: column;
   overflow-y: auto;
-  height: calc(100vh - 120px); /* odejmij wysokość menu i menu2 */
+  height: calc(100dvh - 120px); /* odejmij wysokość menu i menu2 */
   transition: padding-top 0.4s cubic-bezier(0.33, 1, 0.68, 1);
-  padding-top: 0;
+  margin-top: 0;
+  transition: height 0.4s cubic-bezier(0.33, 1, 0.68, 1);
 }
 
 .scroll-container-dropdown-open {
-  height: calc(100vh - 283px);
+  height: calc(100dvh - 303px);
 }
 
 /* Dla Chrome, Edge, Safari */
@@ -278,24 +285,29 @@ body{
   opacity: 0;
   overflow: hidden;
   pointer-events: none;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-bottom: 0;
   transition: all 0.4s cubic-bezier(0.33, 1, 0.68, 1);
 }
 
 /* Dodaj tę klasę dynamicznie w React, gdy dropdown jest widoczny */
 .dropdown-menu.dropdown-menu-visible {
-  max-height: 500px; /* dopasuj do największej możliwej wysokości menu */
+  max-height: 183px; /* dopasuj do największej możliwej wysokości menu */
   opacity: 1;
   pointer-events: auto;
+  padding-bottom: 20px;
   background: none;
 }
 
 
 .dropdown-button {
+  position: relative;
   display: flex;
   flex-direction: row;
   background-color: #111938;
   border: none;
-  gap: 5px;
+  gap: 10px;
   align-items: center;
   justify-content: center;
   padding: 10px;
@@ -304,8 +316,8 @@ body{
   transition: all 0.3s ease;
 }
 .dropdown-icon{
-  width: 20px;
-  height: 20px;
+  width: 15px;
+  height: 15px;
   object-fit: contain;
   border-radius: 5px;
 }
@@ -322,12 +334,22 @@ body{
 
 .user-menu-section {
   gap: 10px;
+  height: 43px;
+  position: relative;
   display: flex;
   flex-direction: row;
   align-items: center;
-  background-color: #111938;
+  background: linear-gradient(120deg, #111938, #081942, #101f4b, #111938);
+  background-size: 300% 300%;
+  animation: userMenuBgAnimation 10s ease-in-out infinite;
   border-radius: 5px;
   padding: 10px;
+}
+
+@keyframes userMenuBgAnimation {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }
 .user-menu-info{
   gap: 5px;
@@ -364,6 +386,17 @@ body{
   border-radius: 5px;
 }
 
+.user-menu-date {
+  cursor: default;
+  position: absolute;
+  right: 10px;
+  bottom: 10px;
+  font-size: 12px;
+  color: #7C8BA1;
+  margin-top: 2px;
+  display: block;
+}
+
 .logout-button {
   display: flex;
   flex-direction: row;
@@ -389,7 +422,7 @@ body{
 .search-container {
   width: 90%;
   max-width: 432px;
-  margin: 25px auto;
+  margin: 10px auto 20px auto;
   background-color: #10172c;
 }
 
@@ -397,7 +430,7 @@ body{
   position: relative;
   display: flex;
   flex-direction: row;
-  margin-bottom: 20px;
+  margin-bottom: 10px;
 }
 
 .input {
@@ -459,7 +492,7 @@ body{
   width: 41px;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease; 
+  transition: all 0.3s ease; 
 }
 .filter-button:hover {
   filter: brightness(1.1);
@@ -474,7 +507,6 @@ body{
 .filter-container {
   max-height: 0; /* zamiast transform */
   opacity: 0;
-  margin-top: -5px;
   margin-bottom: 0;
   padding-top: 0;
   padding-bottom: 0;
@@ -486,9 +518,8 @@ body{
 
 /* Dodaj tę klasę dynamicznie w React, gdy filtr jest widoczny */
 .filter-container.filter-container-visible {
-  max-height: 300px; /* dopasuj do największej możliwej wysokości filtrów */
+  max-height: 450px; /* dopasuj do największej możliwej wysokości filtrów */
   opacity: 1;
-  padding-top: 10px;
   margin-bottom: 15px;
   pointer-events: auto;
 }
@@ -526,19 +557,23 @@ body{
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 8px;
+  padding: 3px;
+  margin-bottom: 10px;
 }
 
-.price-filter-label {
+.filter-label {
+  padding: 5px;
   position: relative;
   color: #7C8BA1;
   font-size: 15px;
   font-weight: bold;
-  margin-right: 4px;
   letter-spacing: 0.5px;
 }
 
-
+.sorting-options {
+  display: flex;
+  flex-wrap: wrap;
+}
 
 .no-matches-error {
   margin: 20px auto;
@@ -573,7 +608,7 @@ body{
 }
 
 .price-filter-input:focus {
-  border: 1.5px solid #112b6f;
+  border: 1px solid #112b6f;
 }
 
 .price-filter-separator {
@@ -595,20 +630,52 @@ body{
   margin: 0;
 }
 
+.search-buttons{
+  position: relative;
+  display: flex;
+  width: 100%;
+  flex-direction: row;
+}
 
 
 .search-button {
   position: relative;
-  margin-top: 5px; /* Stały odstęp od filtrów */
   background-color: #112b6f;
   padding: 10px;
   color: #7C8BA1;
   border-radius: 5px;
   text-align: center;
   border: none;
-  width: 100%;
   cursor: pointer;
-  transition: all 0.2s ease; /* Subtelna animacja przycisku */
+  transition: all 0.3s ease;
+  box-shadow: 0 1px 6px rgba(17, 43, 111, 0.4);
+  flex: 1;
+  height: 41px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.clear-button{
+  margin-left: 10px;
+  background-color: #111938;
+  border: none;
+  border-radius: 5px; 
+  align-items: center; 
+  display: flex; 
+  height: 41px;
+  width: 41px;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+.clear-button:hover {
+  filter: brightness(1.1);
+}
+.clear-icon{
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
 }
 
 .search-button-text{
@@ -747,10 +814,12 @@ body{
   object-fit: contain;
   cursor: pointer;
   padding: 3px;
-  background: #232a4d;
+  border: 1px solid #112b6f;
   border-radius: 5px;
+  background: #111938;
+  box-shadow: 0 1px 6px rgba(17, 43, 111, 0.4);
 }
-.suggestion-cart:hover{
+.suggestion-menu img:hover {
   filter: brightness(1.1);
 }
 .suggestion-prices {
@@ -814,9 +883,6 @@ body{
   color: #e8b84c;
   font-weight: bold;
 }
-.suggestion-eye:hover{
-  filter: brightness(1.1);
-}
 .suggestion-info-container{
   display: flex;
   flex-direction: row;
@@ -857,7 +923,8 @@ body{
   letter-spacing: 0.4px;
   border: none;
   cursor: pointer;
-  transition: all 0.2s ease; /* Subtelna animacja przycisku */
+  transition: all 0.3s ease; /* Subtelna animacja przycisku */
+  box-shadow: 0 1px 6px rgba(17, 43, 111, 0.4);
 }
 .buy-button:hover {
   filter: brightness(1.1);
