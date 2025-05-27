@@ -10,6 +10,7 @@ interface SettingsProps {
   onNavigateToFavorites: () => void;
   onNavigateToNotifications: () => void;
   onNavigateToSupport: () => void;
+  isPremium?: boolean;
 }
 
 const Settings: React.FC<SettingsProps> = ({ 
@@ -21,10 +22,32 @@ const Settings: React.FC<SettingsProps> = ({
   onNavigateToSearch,
   onNavigateToFavorites,
   onNavigateToNotifications,
-  onNavigateToSupport
+  onNavigateToSupport,
+  isPremium = false
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
-  const [activeMenu2] = useState<number>(-1); // Settings nie ma aktywnego przycisku w menu2
+  const [activeMenu2] = useState<number>(-1);
+  
+  // Settings state
+  const [priceAlerts, setPriceAlerts] = useState<boolean>(true);
+  const [resultLimit, setResultLimit] = useState<number>(isPremium ? 5 : 3);
+  const [platforms, setPlatforms] = useState<{[key: string]: boolean}>({
+    CSFloat: true,
+    Skinport: true,
+    BitSkins: true,
+    WAXPEER: true,
+    SkinBaron: true,
+    ShadowPay: true
+  });
+
+  const platformIcons: {[key: string]: string} = {
+    CSFloat: '/assets/csfloat.png',
+    Skinport: '/assets/skinport.png',
+    BitSkins: '/assets/bitskins.png',
+    WAXPEER: '/assets/waxpeer.png',
+    SkinBaron: '/assets/skinbaron.png',
+    ShadowPay: '/assets/shadowpay.png'
+  };
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -32,6 +55,15 @@ const Settings: React.FC<SettingsProps> = ({
 
   const handleLogout = () => {
     onLogout();
+  };
+
+  const handlePlatformToggle = (platform: string) => {
+    if (!isPremium) return; // Block for freemium users
+    
+    setPlatforms(prev => ({
+      ...prev,
+      [platform]: !prev[platform]
+    }));
   };
 
   const formattedDate = firstLogin ? new Date(firstLogin).toLocaleDateString() : '';
@@ -57,7 +89,7 @@ const Settings: React.FC<SettingsProps> = ({
                 <img src="/assets/logout.png" alt="logout" className="logout-icon" />
               </button>
             </div>
-            <span className='user-sub'>PREMIUM</span>
+            <span className='user-sub'>{isPremium ? 'PREMIUM' : 'FREEMIUM'}</span>
             <span className="user-menu-date">
               Member since: <b>{formattedDate}</b>
             </span>
@@ -74,8 +106,91 @@ const Settings: React.FC<SettingsProps> = ({
       </div>
 
       <div className={`scroll-container${isMenuOpen ? ' scroll-container-dropdown-open' : ''}`}>
-        <div style={{ flex: 1, padding: 20, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-          <span className="title">Settings {username}!</span>
+        <div className="settings-content">
+          
+          {/* Price Alerts Setting */}
+          <div className="settings-section">
+            <div className="filter-label">Price Alerts</div>
+            <div className="settings-description">
+              Get notified when tracked items drop in price
+            </div>
+            <label className="toggle-switch">
+              <input 
+                type="checkbox" 
+                checked={priceAlerts}
+                onChange={() => setPriceAlerts(!priceAlerts)}
+              />
+              <span className="slider"></span>
+            </label>
+          </div>
+
+          {/* Result Limit Setting */}
+          <div className="settings-section">
+            <div className="filter-label">
+              Search Result Limit
+              {!isPremium && <span className="premium-badge">PREMIUM ONLY</span>}
+            </div>
+            <div className="settings-description">
+              Number of items to display at once
+            </div>
+            <div className="checkbox-container">
+              {[3, 4, 5].map(limit => (
+                <button 
+                  key={limit}
+                  className={`checkbox-button${resultLimit === limit ? ' checkbox-button-active' : ''}${!isPremium ? ' checkbox-button-freemium-disabled' : ''}`}
+                  onClick={() => {
+                    if (isPremium) {
+                      setResultLimit(limit);
+                    }
+                  }}
+                  disabled={!isPremium}
+                >
+                  <span className="checkbox-text">{limit}</span>
+                </button>
+              ))}
+            </div>
+            {!isPremium && (
+              <div className="premium-warning">
+                Upgrade to Premium to increase search result limit
+              </div>
+            )}
+          </div>
+
+          {/* Preferred Platforms Setting */}
+          <div className="settings-section">
+            <div className="filter-label">
+              Preferred Platforms
+              {!isPremium && <span className="premium-badge">PREMIUM ONLY</span>}
+            </div>
+            <div className="settings-description">
+              Choose which marketplaces to display in suggestions
+            </div>
+            <div className="platforms-container">
+              {Object.entries(platforms).map(([platform, enabled]) => (
+                <button 
+                  key={platform}
+                  className={`platform-button${enabled ? ' platform-button-active' : ''}${!isPremium ? ' checkbox-button-disabled' : ''}`}
+                  onClick={() => handlePlatformToggle(platform)}
+                  disabled={!isPremium}
+                >
+                  <img 
+                    src={platformIcons[platform]} 
+                    alt={platform}
+                    className="platform-icon"
+                  />
+                  <span className="platform-text">
+                    {platform}
+                  </span>
+                </button>
+              ))}
+            </div>
+            {!isPremium && (
+              <div className="premium-warning">
+                Upgrade to Premium to customize marketplace preferences
+              </div>
+            )}
+          </div>
+
         </div>
       </div>
 

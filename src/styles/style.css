@@ -49,10 +49,10 @@ button, .dropdown-button, .menu-icon, .filter-button, .search-button, .buy-butto
 .container {
   display: flex;
   flex-direction: column;
-  min-height: calc(100dvh - 120px); /* odejmij wysokość menu i menu2 */
+  min-height: calc(100dvh - 120px); 
   background-color: #10172c;
-  padding-top: 60px;    /* wysokość menu */
-  padding-bottom: 60px; /* wysokość menu2 */
+  padding-top: 60px;
+  padding-bottom: 60px;
   box-sizing: border-box;
   position: relative;
 }
@@ -210,7 +210,7 @@ button, .dropdown-button, .menu-icon, .filter-button, .search-button, .buy-butto
 }
 
 .scroll-container-dropdown-open {
-  height: calc(100dvh - 303px);
+  height: calc(100dvh - 300px);
 }
 
 /* Dla Chrome, Edge, Safari */
@@ -449,30 +449,9 @@ button, .dropdown-button, .menu-icon, .filter-button, .search-button, .buy-butto
   border-radius: 5px;
 }
 
-/* Style dla placeholdera - różne przeglądarki wymagają różnych selektorów */
 .input-inner::placeholder {
   color: #7C8BA1;
-}
-
-/* Dla Chrome, Safari, Opera */
-.input-inner::-webkit-input-placeholder {
-  color: #7C8BA1;
-}
-
-/* Dla Firefox */
-.input-inner::-moz-placeholder {
-  color: #7C8BA1;
-  opacity: 1;
-}
-
-/* Dla Internet Explorer */
-.input-inner:-ms-input-placeholder {
-  color: #7C8BA1;
-}
-
-/* Dla Edge */
-.input-inner::-ms-input-placeholder {
-  color: #7C8BA1;
+  opacity: 0.7;
 }
 
 .search-icon {
@@ -518,7 +497,7 @@ button, .dropdown-button, .menu-icon, .filter-button, .search-button, .buy-butto
 
 /* Dodaj tę klasę dynamicznie w React, gdy filtr jest widoczny */
 .filter-container.filter-container-visible {
-  max-height: 450px; /* dopasuj do największej możliwej wysokości filtrów */
+  max-height: 410px; /* dopasuj do największej możliwej wysokości filtrów */
   opacity: 1;
   margin-bottom: 15px;
   pointer-events: auto;
@@ -534,30 +513,37 @@ button, .dropdown-button, .menu-icon, .filter-button, .search-button, .buy-butto
 .checkbox-button {
   position: relative;
   background-color: #111938;
+  border: 1px solid #232a4d;
   padding: 10px;
   border-radius: 5px;
-  margin: 3px;
-  border: none;
   cursor: pointer;
+  transition: all 0.3s ease; /* Subtelna animacja przycisku */
+  margin-right: 5px;
+  margin-bottom: 5px;
+  outline: none;
+  user-select: none;
 }
 
-.checkbox-button-active {
-  background-color: #112b6f;
-}
 .checkbox-button:hover {
   filter: brightness(1.1);
 }
 
+.checkbox-button-active {
+  background-color: #112b6f;
+  border-color: #28469a;
+  box-shadow: 0 1px 6px rgba(17, 43, 111, 0.4);
+}
+
+
 .checkbox-text {
   color: #7C8BA1;
-  font-size: 16px;
+  font-size: 15px;
 }
 
 .price-filter-row {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 3px;
   margin-bottom: 10px;
 }
 
@@ -581,7 +567,7 @@ button, .dropdown-button, .menu-icon, .filter-button, .search-button, .buy-butto
   background: rgba(194,0,0,0.1);
   border-left: 2px solid #c20000;
   border-radius: 5px;
-  color: #dfdfdf;
+  color: #7C8BA1;
   font-size: 14px;
   text-align: center;
   max-width: 350px;
@@ -600,15 +586,19 @@ button, .dropdown-button, .menu-icon, .filter-button, .search-button, .buy-butto
   background: #111938;
   border: 1px solid #232a4d;
   border-radius: 5px;
-  color: #dfdfdf;
-  padding: 6px 8px;
+  color: #7C8BA1;
+  padding: 10px;
   font-size: 15px;
   outline: none;
   transition: border 0.3s;
 }
+.price-filter-input::placeholder {
+  color: #7C8BA1;
+  opacity: 0.7;
+}
 
 .price-filter-input:focus {
-  border: 1px solid #112b6f;
+  border-color: #112b6f;
 }
 
 .price-filter-separator {
@@ -640,7 +630,7 @@ button, .dropdown-button, .menu-icon, .filter-button, .search-button, .buy-butto
 
 .search-button {
   position: relative;
-  background-color: #112b6f;
+  background: #112b6f;
   padding: 10px;
   color: #7C8BA1;
   border-radius: 5px;
@@ -1015,3 +1005,211 @@ button, .dropdown-button, .menu-icon, .filter-button, .search-button, .buy-butto
   height: 25px;
 }
 
+
+
+
+
+
+
+
+/*                        settings                              */
+
+
+
+
+
+.settings-content {
+  width: 90%;
+  max-width: 432px;
+  margin: 20px auto;
+}
+
+.settings-section {
+  margin-bottom: 25px;
+  padding: 20px;
+  background: linear-gradient(135deg, #111938 0%, #0f1730 50%, #111938 100%);
+  border-radius: 5px;
+  box-shadow: 0 1px 6px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(124, 139, 161, 0.1);
+  position: relative;
+  overflow: hidden;
+}
+
+.settings-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: linear-gradient(90deg, transparent, #29479d, transparent);
+  opacity: 0.6;
+}
+
+.settings-content .filter-label {
+  padding: 0 0 8px 0;
+  color: #7C8BA1;
+  font-size: 18px;
+  font-weight: bold;
+  letter-spacing: 0.5px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-description {
+  color: #7C8BA1;
+  font-size: 14px;
+  margin-bottom: 15px;
+  line-height: 1.5;
+  opacity: 0.9;
+}
+
+.premium-badge {
+  position: absolute;
+  top: -15px;
+  right: -15px;
+  background: linear-gradient(45deg, #e8b84c, #f4d03f);
+  color: #111938;
+  font-size: 11px;
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-weight: bold;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 8px rgba(232, 184, 76, 0.3);
+}
+
+.premium-warning {
+  color: #e8b84c;
+  font-size: 12px;
+  font-style: italic;
+  margin-top: 12px;
+  text-align: center;
+  padding: 12px;
+  background: linear-gradient(135deg, rgba(232, 184, 76, 0.1), rgba(232, 184, 76, 0.05));
+  border-radius: 8px;
+  border: 1px solid rgba(232, 184, 76, 0.2);
+  position: relative;
+}
+
+.premium-warning::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #e8b84c, transparent);
+  opacity: 0.5;
+}
+
+.checkbox-button-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+  filter: grayscale(0.6);
+}
+.checkbox-button-freemium-disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  pointer-events: none;
+  filter: grayscale(0.6);
+}
+/* Platforms container - 2 columns layout */
+.platforms-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.platform-button {
+  position: relative;
+  background-color: #111938;
+  border: 1px solid #232a4d;
+  padding: 12px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  outline: none;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 45px;
+}
+
+.platform-button:hover {
+  filter: brightness(1.1);
+}
+
+.platform-button-active {
+  background-color: #112b6f;
+  border-color: #28469a;
+  box-shadow: 0 1px 6px rgba(17, 43, 111, 0.4);
+}
+
+.platform-icon {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  border-radius: 3px;
+  flex-shrink: 0;
+}
+
+.platform-text {
+  color: #7C8BA1;
+  font-size: 14px;
+  font-weight: 500;
+  flex: 1;
+}
+
+.toggle-switch {
+  position: relative;
+  display: inline-block;
+  width: 50px; /* zmniejszone z 60px */
+  height: 25px; /* zmniejszone z 30px */
+}
+
+.toggle-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+}
+
+.slider {
+  position: absolute;
+  cursor: pointer;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #111938;
+  border: 1px solid #232a4d;
+  transition: .3s;
+  border-radius: 25px; /* zmniejszone z 30px */
+}
+
+.slider:before {
+  position: absolute;
+  content: "";
+  height: 18px; /* zmniejszone z 22px */
+  width: 18px; /* zmniejszone z 22px */
+  left: 3px;
+  bottom: 3px;
+  background-color: #7C8BA1;
+  transition: .3s;
+  border-radius: 50%;
+}
+
+input:checked + .slider {
+  background-color: #112b6f;
+  border-color: #28469a;
+  box-shadow: 0 1px 6px rgba(17, 43, 111, 0.4);
+}
+
+input:checked + .slider:before {
+  transform: translateX(25px); /* zmniejszone z 30px */
+  background-color: #7C8BA1;
+}
