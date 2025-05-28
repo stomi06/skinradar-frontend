@@ -9,10 +9,18 @@ import Settings from './Settings';
 import Support from './Support';
 
 const SkinRadarApp = () => {
-  const [steamId, setSteamId] = useState<string | null>(null);
-  const [username, setUsername] = useState<string | null>(null);
-  const [avatar, setAvatar] = useState<string | null>(null);
-  const [firstLogin, setFirstLogin] = useState<string | null>(null);
+  const [steamId, setSteamId] = useState<string | null>(() => {
+    return sessionStorage.getItem('steamId');
+  });
+  const [username, setUsername] = useState<string | null>(() => {
+    return sessionStorage.getItem('username');
+  });
+  const [avatar, setAvatar] = useState<string | null>(() => {
+    return sessionStorage.getItem('avatar');
+  });
+  const [firstLogin, setFirstLogin] = useState<string | null>(() => {
+    return sessionStorage.getItem('firstLogin');
+  });
   const [currentPage, setCurrentPage] = useState<string>('home');
 
   // Stan dla ItemAdd - przechowywany globalnie
@@ -57,21 +65,47 @@ const SkinRadarApp = () => {
       setUsername(username);
       setAvatar(avatar);
       setFirstLogin(firstLogin);
+      
+      // Zapisz do sessionStorage
+      sessionStorage.setItem('steamId', steamId);
+      sessionStorage.setItem('username', username);
+      sessionStorage.setItem('avatar', avatar);
+      sessionStorage.setItem('firstLogin', firstLogin);
+      
+      // Wyczyść URL po zalogowaniu
+      window.history.replaceState({}, document.title, window.location.pathname);
     }
   };
 
   useEffect(() => {
     const url = window.location.href;
-    if (url.includes('?')) handleDeepLink(url);
+    // Sprawdź czy w URL są parametry logowania
+    if (url.includes('?') && url.includes('steamid')) {
+      handleDeepLink(url);
+    }
   }, []);
 
   const handleLogout = () => {
+    // Wyczyść wszystkie dane użytkownika z sessionStorage
+    sessionStorage.removeItem('steamId');
+    sessionStorage.removeItem('username'); 
+    sessionStorage.removeItem('avatar');
+    sessionStorage.removeItem('firstLogin');
+    sessionStorage.removeItem('itemAdd_global_state');
+    
+    // Wyczyść również stan ItemAdd dla tego użytkownika jeśli istnieje
+    if (username) {
+      sessionStorage.removeItem(`itemadd_state_${username}`);
+    }
+    
+    // Resetuj lokalne stany
     setSteamId(null);
     setUsername(null);
     setAvatar(null);
     setFirstLogin(null);
     setCurrentPage('home');
-    // Wyczyść stan ItemAdd przy wylogowaniu
+    
+    // Resetuj stan ItemAdd
     setItemAddState({
       suggestions: [],
       showSuggestions: false,
@@ -84,7 +118,9 @@ const SkinRadarApp = () => {
       isFilterVisible: false,
       noMatchesError: ''
     });
-    sessionStorage.removeItem('itemAdd_global_state');
+    
+    // Wyczyść URL jeśli zawiera parametry logowania
+    window.history.replaceState({}, document.title, window.location.pathname);
   };
 
   // Funkcje nawigacji
@@ -142,18 +178,44 @@ const SkinRadarApp = () => {
 
   return (
     <div className="start-container">
-      <div className="logo-container">
-        <img src="/assets/skinradar.png" alt="SkinRadar Logo" className="logo" />
-        <p className="app-description">
-          Discover, track, and find the best skins for your collection. SkinRadar helps you stay ahead in the market.
-        </p>
+      <div className="login-content">
+        <div className="login-header">
+          <div className="welcome-section">
+            <h1 className="welcome-title">Welcome to SkinRadar</h1>
+            <p className="app-description">
+              Never miss a deal. Your radar for CS2 skins prices in real time.
+            </p>
+          </div>
+        </div>
+
+        <div className="login-section">
+          <div className="login-card">
+            <div className="login-card-header">
+              <h2 className="login-title">Get Started</h2>
+              <p className="login-subtitle">Sign in with your Steam account to continue</p>
+            </div>
+            <button onClick={handleSteamLogin} className="login-button">
+              <img src="/assets/steam.png" className="steam-logo" alt="Steam" />
+              <span className="login-text">Sign in with Steam</span>
+            </button>
+            <div className="login-features">
+              <div className="feature-item">
+                <img src="/assets/track.png" alt="Favorites list" className="feature-icon" />
+                <span className="feature-text">Track prices</span>
+              </div>
+              <div className="feature-item">
+                <img src="/assets/market.png" alt="Favorites list" className="feature-icon" />
+                <span className="feature-text">Multiple markets</span>
+              </div>
+              <div className="feature-item">
+                <img src="/assets/bellon.png" alt="Price alerts" className="feature-icon" />
+                <span className="feature-text">Price alerts</span>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
-      <div className="login-container">
-        <button onClick={handleSteamLogin} className="login-button">
-          <img src="/assets/steam.png" className="steam-logo" alt="Steam" />
-          <span className="login-text">Sign in</span>
-        </button>
-      </div>
+
       <div className="footer">
         <div className="footer-links">
           <a href="/terms" className="footer-link">Privacy Policy</a>
@@ -165,13 +227,13 @@ const SkinRadarApp = () => {
             <img src="/assets/discord.png" alt="Discord" className="social-icon" />
           </a>
           <a href="https://instagram.com" target="_blank" rel="noopener noreferrer">
-            <img src="/assets/grayinsta.png" alt="Instagram" className="social-icon" />
+            <img src="/assets/instagram.png" alt="Instagram" className="social-icon" />
           </a>
           <a href="https://youtube.com" target="_blank" rel="noopener noreferrer">
             <img src="/assets/youtube.png" alt="YouTube" className="social-icon" />
           </a>
         </div>
-        <p className="copyright">© 2025 SkinRadar. All rights reserved.</p>
+        <p className="copyright">© 2025 SkinRadar. Not affiliated with Valve Corp.</p>
       </div>
     </div>
   );
