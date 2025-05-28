@@ -208,7 +208,7 @@ const SkinRadarApp = () => {
                 <span className="feature-text">Multiple markets</span>
               </div>
               <div className="feature-item">
-                <img src="/assets/bellon.png" alt="Price alerts" className="feature-icon" />
+                <img src="/assets/bellON.png" alt="Price alerts" className="feature-icon" />
                 <span className="feature-text">Price alerts</span>
               </div>
             </div>
