@@ -21,6 +21,9 @@ const SkinRadarApp = () => {
   const [firstLogin, setFirstLogin] = useState<string | null>(() => {
     return sessionStorage.getItem('firstLogin');
   });
+  const [isPremium, setIsPremium] = useState<boolean>(() => {
+    return sessionStorage.getItem('isPremium') === 'true';
+  });
   const [currentPage, setCurrentPage] = useState<string>('home');
 
   // Stan dla ItemAdd - przechowywany globalnie
@@ -59,18 +62,21 @@ const SkinRadarApp = () => {
     const username = params.username as string;
     const avatar = params.avatar as string;
     const firstLogin = params.first_login as string;
-
+    const premium = params.premium === 'true' || params.premium === 'True';
+    
     if (steamId && username && avatar && firstLogin) { 
       setSteamId(steamId);
       setUsername(username);
       setAvatar(avatar);
       setFirstLogin(firstLogin);
+      setIsPremium(premium);
       
       // Zapisz do sessionStorage
       sessionStorage.setItem('steamId', steamId);
       sessionStorage.setItem('username', username);
       sessionStorage.setItem('avatar', avatar);
       sessionStorage.setItem('firstLogin', firstLogin);
+      sessionStorage.setItem('isPremium', premium.toString());
       
       // Wyczyść URL po zalogowaniu
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -91,6 +97,7 @@ const SkinRadarApp = () => {
     sessionStorage.removeItem('username'); 
     sessionStorage.removeItem('avatar');
     sessionStorage.removeItem('firstLogin');
+    sessionStorage.removeItem('isPremium');
     sessionStorage.removeItem('itemAdd_global_state');
     
     // Wyczyść również stan ItemAdd dla tego użytkownika jeśli istnieje
@@ -103,6 +110,7 @@ const SkinRadarApp = () => {
     setUsername(null);
     setAvatar(null);
     setFirstLogin(null);
+    setIsPremium(false);
     setCurrentPage('home');
     
     // Resetuj stan ItemAdd
@@ -144,7 +152,8 @@ const SkinRadarApp = () => {
       onNavigateToFavorites: navigateToFavorites,
       onNavigateToNotifications: navigateToNotifications,
       onNavigateToSettings: navigateToSettings,
-      onNavigateToSupport: navigateToSupport
+      onNavigateToSupport: navigateToSupport,
+      isPremium
     };
 
     switch (currentPage) {

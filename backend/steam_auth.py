@@ -76,22 +76,28 @@ async def steam_callback(request: Request):
     
     conn = await get_db_connection()
     try:
+        # Wstaw lub aktualizuj rekord
         await conn.execute(
             '''
-            INSERT INTO user_ids (steam_id, username, first_login)
-            VALUES ($1, $2, $3)
+            INSERT INTO user_ids (steam_id, username, first_login, premium)
+            VALUES ($1, $2, $3, $4)
             ON CONFLICT (steam_id) DO UPDATE
             SET username = EXCLUDED.username
             ''',
             steam_id,
             user_info['personaname'],
-            datetime.datetime.utcnow()
+            datetime.datetime.utcnow(),
+            False  # Tylko dla nowych użytkowników
         )
-        # Pobierz first_login z bazy (zawsze aktualny, nie nadpisany)
-        first_login = await conn.fetchval(
-            'SELECT first_login FROM user_ids WHERE steam_id = $1',
+        
+        # Pobierz aktualne dane
+        user_data = await conn.fetchrow(
+            'SELECT first_login, premium FROM user_ids WHERE steam_id = $1',
             steam_id
         )
+        first_login = user_data['first_login']
+        premium = user_data['premium']
+        print(f"DEBUG: User {steam_id} username updated, premium status: {premium}")  # Debug
     finally:
         await conn.close()
 
@@ -101,5 +107,7 @@ async def steam_callback(request: Request):
         f"&avatar={user_info['avatarfull']}"
         f"&steamid={steam_id}"
         f"&first_login={first_login.date() if hasattr(first_login, 'date') else first_login}"
+        f"&premium={str(premium).lower()}"
     )
+    print(f"DEBUG: Redirect URL: {redirect_url}")  # Debug
     return RedirectResponse(url=redirect_url)

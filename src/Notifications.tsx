@@ -10,6 +10,7 @@ interface NotificationsProps {
   onNavigateToFavorites: () => void;
   onNavigateToSettings: () => void;
   onNavigateToSupport: () => void;
+  isPremium: boolean; // Dodaj tę linię
 }
 
 const Notifications: React.FC<NotificationsProps> = ({ 
@@ -21,7 +22,8 @@ const Notifications: React.FC<NotificationsProps> = ({
   onNavigateToSearch,
   onNavigateToFavorites,
   onNavigateToSettings,
-  onNavigateToSupport
+  onNavigateToSupport,
+  isPremium // Dodaj tę linię
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const [activeMenu2] = useState<number>(3); // Notifications is index 3
@@ -57,7 +59,9 @@ const Notifications: React.FC<NotificationsProps> = ({
                 <img src="/assets/logout.png" alt="logout" className="logout-icon" />
               </button>
             </div>
-            <span className='user-sub'>PREMIUM</span>
+            <span className={`user-sub${isPremium ? '' : ' user-sub-free'}`}>
+              {isPremium ? 'PREMIUM' : 'FREE'}
+            </span>
             <span className="user-menu-date">
               Member since: <b>{formattedDate}</b>
             </span>

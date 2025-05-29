@@ -5,16 +5,16 @@ interface ItemAddProps {
   username: string;
   avatar: string;
   onLogout: () => void;
-  onNavigateToList: () => void;
   firstLogin: string;
   onNavigateToHome: () => void;
-  onNavigateToSearch: () => void;
+  onNavigateToList: () => void;
   onNavigateToFavorites: () => void;
   onNavigateToNotifications: () => void;
   onNavigateToSettings: () => void;
   onNavigateToSupport: () => void;
   itemAddState: any;
-  setItemAddState: (state: any) => void;
+  setItemAddState: any;
+  isPremium: boolean; // Dodaj tę linię
 }
 
 const wearLevels = ["Factory New", "Minimal Wear", "Field-Tested", "Well-Worn", "Battle-Scarred"];
@@ -50,16 +50,16 @@ const ItemAdd: React.FC<ItemAddProps> = ({
   username, 
   avatar, 
   onLogout, 
-  onNavigateToList, 
   firstLogin,
   onNavigateToHome,
-  onNavigateToSearch,
+  onNavigateToList,
   onNavigateToFavorites,
   onNavigateToNotifications,
   onNavigateToSettings,
   onNavigateToSupport,
   itemAddState,
-  setItemAddState
+  setItemAddState,
+  isPremium // Dodaj tę linię
 }) => {
   // Użyj stanu z props zamiast lokalnego
   const {
@@ -200,7 +200,9 @@ const ItemAdd: React.FC<ItemAddProps> = ({
                 <img src="/assets/logout.png" alt="logout" className="logout-icon" />
               </button>
             </div>
-            <span className='user-sub'>PREMIUM</span>
+            <span className={`user-sub${isPremium ? '' : ' user-sub-free'}`}>
+              {isPremium ? 'PREMIUM' : 'FREE'}
+            </span>
             <span className="user-menu-date">
               Member since: <b>{formattedDate}</b>
             </span>

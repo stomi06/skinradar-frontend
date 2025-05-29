@@ -2,10 +2,12 @@ from fastapi import FastAPI
 from steam_auth import router
 from suggestions import router as suggestions_router
 from fastapi.middleware.cors import CORSMiddleware
+from api_routes import router as api_router
 
 app = FastAPI()
 app.include_router(router)
 app.include_router(suggestions_router)
+app.include_router(api_router)
 
 app.add_middleware(
     CORSMiddleware,

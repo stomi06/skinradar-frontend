@@ -10,7 +10,7 @@ interface SettingsProps {
   onNavigateToFavorites: () => void;
   onNavigateToNotifications: () => void;
   onNavigateToSupport: () => void;
-  isPremium?: boolean;
+  isPremium: boolean; 
 }
 
 const Settings: React.FC<SettingsProps> = ({ 
@@ -23,7 +23,7 @@ const Settings: React.FC<SettingsProps> = ({
   onNavigateToFavorites,
   onNavigateToNotifications,
   onNavigateToSupport,
-  isPremium = false
+  isPremium // Usuń = false
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
   const [activeMenu2] = useState<number>(-1);
@@ -89,7 +89,9 @@ const Settings: React.FC<SettingsProps> = ({
                 <img src="/assets/logout.png" alt="logout" className="logout-icon" />
               </button>
             </div>
-            <span className='user-sub'>{isPremium ? 'PREMIUM' : 'FREEMIUM'}</span>
+            <span className={`user-sub${isPremium ? '' : ' user-sub-free'}`}>
+              {isPremium ? 'PREMIUM' : 'FREE'}
+            </span>
             <span className="user-menu-date">
               Member since: <b>{formattedDate}</b>
             </span>
@@ -108,7 +110,47 @@ const Settings: React.FC<SettingsProps> = ({
       <div className={`scroll-container${isMenuOpen ? ' scroll-container-dropdown-open' : ''}`}>
         <div className="settings-content">
           
-          {/* Price Alerts Setting */}
+          {/* Premium Upgrade Section - tylko dla FREE użytkowników */}
+            <div className="settings-section premium-upgrade-section">
+              <div className="premium-header">
+                <div className="premium-title">
+                  <img src="/assets/crown.png" alt="Premium" className="premium-crown"/>
+                  <span className="premium-title-text">Premium Access</span>
+                </div>
+                <div className="premium-price">$2.99/month</div>
+              </div>
+              <div className="premium-features">
+                <div className="premium-feature">
+                  <img src="/assets/check.png" alt="Check" className="feature-check"/>
+                  <span>Increased search results (up to 5 items)</span>
+                </div>
+                <div className="premium-feature">
+                  <img src="/assets/check.png" alt="Check" className="feature-check"/>
+                  <span>Customize marketplace preferences</span>
+                </div>
+                <div className="premium-feature">
+                  <img src="/assets/check.png" alt="Check" className="feature-check"/>
+                  <span>Priority customer support</span>
+                </div>
+                <div className="premium-feature">
+                  <img src="/assets/check.png" alt="Check" className="feature-check"/>
+                  <span>Advanced price alerts</span>
+                </div>
+              </div>
+              <button 
+                className="premium-upgrade-button"
+                onClick={() => {
+                  // Tu dodasz logikę płatności
+                  alert('Premium upgrade coming soon!');
+                }}
+              >
+                <img src="/assets/crown.png" alt="Crown" className="upgrade-crown"/>
+                <span>Upgrade Now</span>
+              </button>
+            </div>
+
+
+          {/* Existing settings sections */}
           <div className="settings-section">
             <div className="filter-label">Price Alerts</div>
             <div className="settings-description">
