@@ -92,9 +92,6 @@ const Settings: React.FC<SettingsProps> = ({
             <span className={`user-sub${isPremium ? '' : ' user-sub-free'}`}>
               {isPremium ? 'PREMIUM' : 'FREE'}
             </span>
-            <span className="user-menu-date">
-              Member since: <b>{formattedDate}</b>
-            </span>
           </div>
         </div>
         <button className="dropdown-button" onClick={() => {}}>

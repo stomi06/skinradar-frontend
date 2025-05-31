@@ -50,6 +50,7 @@ const SkinRadarApp = () => {
 
   const handleSteamLogin = async () => {
     try {
+      
       window.location.href = `https://skinradar-d0a6bmd2a3c6dbde.northeurope-01.azurewebsites.net/auth/steam`;
     } catch (error) {
       alert('Error: An error occurred during Steam login');

@@ -62,9 +62,6 @@ const Home: React.FC<HomeProps> = ({
             <span className={`user-sub${isPremium ? '' : ' user-sub-free'}`}>
               {isPremium ? 'PREMIUM' : 'FREE'}
             </span>
-            <span className="user-menu-date">
-              Member since: <b>{formattedDate}</b>
-            </span>
           </div>
         </div>
         <button className="dropdown-button" onClick={onNavigateToSettings}>
@@ -85,6 +82,43 @@ const Home: React.FC<HomeProps> = ({
             <div className="section-header">
               <img src="/assets/download.png" alt="Install" className="section-icon"/>
               <span className="section-title">Install SkinRadar Mobile App</span>
+            </div>
+            <div className="pwa-visualization">
+              <div className="pwa-browser">
+                <div className="browser-header">
+                  <div className="browser-dots">
+                    <div className="dot red"></div>
+                    <div className="dot yellow"></div>
+                    <div className="dot green"></div>
+                  </div>
+                  <div className="browser-url">skinradar.app</div>
+                </div>
+                <div className="browser-content">
+                  <div className="browser-menu">⋮</div>
+                  <div className="install-popup">
+                    <img src="/assets/phone.png" alt="Phone" className="popup-icon-img"/>
+                    <div className="popup-text">Install App</div>
+                  </div>
+                </div>
+              </div>
+              <div className="pwa-arrow">→</div>
+              <div className="pwa-homescreen">
+                <div className="homescreen-grid">
+                  <div className="app-icon chrome">
+                    <img src="/assets/chrome.png" alt="SkinRadar" className="chrome-logo"/>
+                  </div>
+                  <div className="app-icon skinradar">
+                    <img src="/assets/skinradar2.png" alt="SkinRadar" className="skinradar-logo"/>
+                  </div>
+                  <div className="app-icon settings">
+                    <img src="/assets/settings.png" alt="Settings" className="app-icon-img"/>
+                  </div>
+                  <div className="app-icon camera">
+                    <img src="/assets/camera.png" alt="Camera" className="app-icon-img"/>
+                  </div>
+                </div>
+                <div className="homescreen-text">SkinRadar</div>
+              </div>
             </div>
             <div className="pwa-guide">
               <div className="pwa-step">
@@ -118,6 +152,99 @@ const Home: React.FC<HomeProps> = ({
             </div>
           </div>
 
+          {/* How It Works Section */}
+          <div className="home-section how-it-works-section">
+            <div className="section-header">
+              <img src="/assets/info.png" alt="How it works" className="section-icon"/>
+              <span className="section-title">How Price Alerts Work</span>
+            </div>
+            <div className="how-it-works-content">
+              <div className="demo-visualization">
+                <div className="demo-phone">
+                  <div className="demo-screen">
+                    <div className="demo-search-bar">
+                      <img src="/assets/searchimage.png" alt="Search" className="demo-search-icon"/>
+                      <span className="demo-text">AK Redline</span>
+                    </div>
+                    <div className="demo-item">
+                      <img 
+                          src="https://steamcommunity-a.akamaihd.net/economy/image/class/730/4702298879" 
+                          alt="AK-47 Redline" 
+                          className="demo-item-img"
+                      />
+                      <div className="demo-item-details">
+                        <div className="demo-item-name">AK-47 | Redline</div>
+                        <div className="demo-price">€24.50</div>
+                      </div>
+                    </div>
+                    <div className="demo-alert-form">
+                      <div className="demo-input">
+                        <span>Alert when price drops to: €20.00</span>
+                      </div>
+                      <div className="demo-button">Set Alert</div>
+                    </div>
+                  </div>
+                </div>
+                <div className="demo-arrow">→</div>
+                <div className="demo-notification">
+                  <img src="/assets/phone.png" alt="Phone" className="notification-icon-img"/>
+                  <div className="notification-text">
+                    <div className="notification-title">Price Alert!</div>
+                    <div className="notification-body">AK-47 Redline is now €19.99</div>
+                  </div>
+                </div>
+              </div>
+              <div className="how-it-works-steps">
+                <div className="work-step">
+                  <div className="step-number">1</div>
+                  <div className="step-title">Search for any CS2 skin</div>
+                </div>
+                <div className="work-step">
+                  <div className="step-number">2</div>
+                  <div className="step-title">Set your desired price alert</div>
+                </div>
+                <div className="work-step">
+                  <div className="step-number">3</div>
+                  <div className="step-title">Get notified when price drops</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* User Dashboard */}
+          <div className="home-section user-dashboard-section">
+            <div className="section-header">
+              <img src="/assets/user.png" alt="User" className="section-icon"/>
+              <span className="section-title">Your Dashboard</span>
+            </div>
+            <div className="user-dashboard-content">
+              <div className="user-info-card">
+                <img src={avatar} alt="avatar" className="dashboard-avatar" />
+                <div className="user-info-details">
+                  <div className="dashboard-username">{username}</div>
+                  <div className={`dashboard-status ${isPremium ? 'premium' : 'free'}`}>
+                    {isPremium ? 'PREMIUM' : 'FREE'}
+                  </div>
+                </div>
+              </div>
+              <div className="user-stats-simple">
+                <div className="stat-item-simple">
+                  <img src="/assets/eye.png" alt="Tracked" className="stat-icon-img"/>
+                  <div className="stat-content">
+                    <div className="stat-number">0</div>
+                    <div className="stat-label">Tracked Items</div>
+                  </div>
+                </div>
+              </div>
+              <div className="user-info-simple">
+                <div className="stat-info-simple">
+                  <span className="dashboard-member-since">Member since: {formattedDate}</span>
+                  <span className="dashboard-premium-exp">Premium expires: 01.07.2025</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Giveaway Section */}
           <div className="home-section giveaway-section">
             <div className="section-header">
@@ -134,10 +261,7 @@ const Home: React.FC<HomeProps> = ({
                 <div className="giveaway-details">
                   <div className="giveaway-name">Desert Eagle | Printstream</div>
                   <div className="giveaway-condition">Factory New</div>
-                  <div className="giveaway-meta">
-                    <span className="giveaway-rarity covert">Covert</span>
-                    <span className="giveaway-collection">The Fracture Collection</span>
-                  </div>
+                  <span className="giveaway-collection">The Fracture Collection</span>
                 </div>
               </div>
               <div className="giveaway-action">
@@ -145,12 +269,37 @@ const Home: React.FC<HomeProps> = ({
                   className="join-giveaway-button"
                   onClick={() => window.open('https://discord.gg/2rJJbDpF', '_blank')}
                 >
-                  <span>Join Giveaway</span>
+                  <span>Join</span>
                 </button>
                 <div className="giveaway-info">
                   <div className="giveaway-participants">247 participants</div>
                   <div className="giveaway-deadline">Ends: June 15, 2025</div>
                 </div>
+              </div>
+            </div>
+          </div>
+
+          {/* News Section */}
+          <div className="home-section news-section">
+            <div className="section-header">
+              <img src="/assets/news.png" alt="News" className="section-icon"/>
+              <span className="section-title">Latest News</span>
+            </div>
+            <div className="news-content">
+              <div className="news-item">
+                <div className="news-date">Today</div>
+                <div className="news-title">CS2 Market Update: New Item Collection Released</div>
+                <div className="news-description">The Dreams & Nightmares Collection has been added to CS2, featuring community-designed skins.</div>
+              </div>
+              <div className="news-item">
+                <div className="news-date">2 days ago</div>
+                <div className="news-title">SkinRadar Premium Features Expanded</div>
+                <div className="news-description">New price alert system and advanced filtering options now available for Premium users.</div>
+              </div>
+              <div className="news-item">
+                <div className="news-date">1 week ago</div>
+                <div className="news-title">Major Trading Platforms Integration</div>
+                <div className="news-description">Added support for 3 new marketplaces with real-time price tracking.</div>
               </div>
             </div>
           </div>
