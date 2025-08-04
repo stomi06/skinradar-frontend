@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface HomeProps {
   username: string;
@@ -10,7 +10,9 @@ interface HomeProps {
   onNavigateToNotifications: () => void;
   onNavigateToSettings: () => void;
   onNavigateToSupport: () => void;
-  isPremium: boolean; // Dodaj tę linię
+  onNavigateToPrivacy: () => void;  // Dodaj
+  onNavigateToTerms: () => void;    // Dodaj
+  isPremium: boolean;
 }
 
 const Home: React.FC<HomeProps> = ({ 
@@ -23,10 +25,24 @@ const Home: React.FC<HomeProps> = ({
   onNavigateToNotifications,
   onNavigateToSettings,
   onNavigateToSupport,
-  isPremium // Dodaj tę linię
+  onNavigateToPrivacy,  // Dodaj
+  onNavigateToTerms,    // Dodaj
+  isPremium
 }) => {
   const [isMenuOpen, setIsMenuOpen] = useState<boolean>(false);
-  const [activeMenu2] = useState<number>(0); // Home is index 0
+  const [activeMenu2] = useState<number>(0);
+  const [showTutorials, setShowTutorials] = useState<boolean>(false);
+
+  useEffect(() => {
+    // Sprawdź czy to nowy użytkownik (mniej niż 3 dni od rejestracji)
+    const accountAge = firstLogin ? new Date().getTime() - new Date(firstLogin).getTime() : 0;
+    const daysSinceRegistration = accountAge / (1000 * 60 * 60 * 24);
+    
+    // Pokaż tutoriale automatycznie tylko nowym użytkownikom
+    if (daysSinceRegistration <= 3) {
+      setShowTutorials(true);
+    }
+  }, [firstLogin]);
 
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -34,6 +50,10 @@ const Home: React.FC<HomeProps> = ({
 
   const handleLogout = () => {
     onLogout();
+  };
+
+  const toggleTutorials = () => {
+    setShowTutorials(!showTutorials);
   };
 
   const formattedDate = firstLogin ? new Date(firstLogin).toLocaleDateString() : '';
@@ -77,135 +97,150 @@ const Home: React.FC<HomeProps> = ({
       <div className={`scroll-container${isMenuOpen ? ' scroll-container-dropdown-open' : ''}`}>
         <div className="home-content">
           
-          {/* PWA Installation Guide */}
-          <div className="home-section pwa-section">
-            <div className="section-header">
-              <img src="/assets/download.png" alt="Install" className="section-icon"/>
-              <span className="section-title">Install SkinRadar Mobile App</span>
-            </div>
-            <div className="pwa-visualization">
-              <div className="pwa-browser">
-                <div className="browser-header">
-                  <div className="browser-dots">
-                    <div className="dot red"></div>
-                    <div className="dot yellow"></div>
-                    <div className="dot green"></div>
-                  </div>
-                  <div className="browser-url">skinradar.app</div>
-                </div>
-                <div className="browser-content">
-                  <div className="browser-menu">⋮</div>
-                  <div className="install-popup">
-                    <img src="/assets/phone.png" alt="Phone" className="popup-icon-img"/>
-                    <div className="popup-text">Install App</div>
-                  </div>
-                </div>
-              </div>
-              <div className="pwa-arrow">→</div>
-              <div className="pwa-homescreen">
-                <div className="homescreen-grid">
-                  <div className="app-icon chrome">
-                    <img src="/assets/chrome.png" alt="SkinRadar" className="chrome-logo"/>
-                  </div>
-                  <div className="app-icon skinradar">
-                    <img src="/assets/skinradar2.png" alt="SkinRadar" className="skinradar-logo"/>
-                  </div>
-                  <div className="app-icon settings">
-                    <img src="/assets/settings.png" alt="Settings" className="app-icon-img"/>
-                  </div>
-                  <div className="app-icon camera">
-                    <img src="/assets/camera.png" alt="Camera" className="app-icon-img"/>
-                  </div>
-                </div>
-                <div className="homescreen-text">SkinRadar</div>
-              </div>
-            </div>
-            <div className="pwa-guide">
-              <div className="pwa-step">
-                <div className="step-number">1</div>
-                <div className="step-content">
-                  <div className="step-title">Open browser menu</div>
-                  <div className="step-description">Look for three dots or menu icon</div>
-                </div>
-              </div>
-              <div className="pwa-step">
-                <div className="step-number">2</div>
-                <div className="step-content">
-                  <div className="step-title">Find "Install app" or "Add to Home Screen"</div>
-                  <div className="step-description">Different browsers use different names</div>
-                </div>
-              </div>
-              <div className="pwa-step">
-                <div className="step-number">3</div>
-                <div className="step-content">
-                  <div className="step-title">Confirm installation</div>
-                  <div className="step-description">App will be added to your device</div>
-                </div>
-              </div>
-              <div className="pwa-step">
-                <div className="step-number">4</div>
-                <div className="step-content">
-                  <div className="step-title">Find app on your desktop</div>
-                  <div className="step-description">Use it like a regular native application</div>
-                </div>
-              </div>
-            </div>
+          {/* Przycisk toggle tutoriali */}
+          <div className="tutorial-toggle-section">
+            <button onClick={toggleTutorials} className="home-section tutorial-toggle-button">
+              <img 
+                src={showTutorials ? "/assets/eye-off.png" : "/assets/lightbulb.png"} 
+                alt={showTutorials ? "Hide" : "Show"} 
+                className="tutorial-button-icon"
+              />
+              <span>{showTutorials ? 'Hide Tutorials' : 'Show Tutorials'}</span>
+            </button>
           </div>
 
-          {/* How It Works Section */}
-          <div className="home-section how-it-works-section">
-            <div className="section-header">
-              <img src="/assets/info.png" alt="How it works" className="section-icon"/>
-              <span className="section-title">How Price Alerts Work</span>
-            </div>
-            <div className="how-it-works-content">
-              <div className="demo-visualization">
-                <div className="demo-phone">
-                  <div className="demo-screen">
-                    <div className="demo-search-bar">
-                      <img src="/assets/searchimage.png" alt="Search" className="demo-search-icon"/>
-                      <span className="demo-text">AK Redline</span>
+          {/* Tutoriale z animacją */}
+          <div className={`tutorials-container ${showTutorials ? 'tutorials-visible' : 'tutorials-hidden'}`}>
+            {/* PWA Installation Guide */}
+            <div className="home-section pwa-section">
+              <div className="section-header">
+                <img src="/assets/download.png" alt="Install" className="section-icon"/>
+                <span className="section-title">Install SkinRadar Mobile App</span>
+              </div>
+              <div className="pwa-visualization">
+                <div className="pwa-browser">
+                  <div className="browser-header">
+                    <div className="browser-dots">
+                      <div className="dot red"></div>
+                      <div className="dot yellow"></div>
+                      <div className="dot green"></div>
                     </div>
-                    <div className="demo-item">
-                      <img 
-                          src="https://steamcommunity-a.akamaihd.net/economy/image/class/730/4702298879" 
-                          alt="AK-47 Redline" 
-                          className="demo-item-img"
-                      />
-                      <div className="demo-item-details">
-                        <div className="demo-item-name">AK-47 | Redline</div>
-                        <div className="demo-price">€24.50</div>
-                      </div>
-                    </div>
-                    <div className="demo-alert-form">
-                      <div className="demo-input">
-                        <span>Alert when price drops to: €20.00</span>
-                      </div>
-                      <div className="demo-button">Set Alert</div>
+                    <div className="browser-url">skinradar.app</div>
+                  </div>
+                  <div className="browser-content">
+                    <div className="browser-menu">⋮</div>
+                    <div className="install-popup">
+                      <img src="/assets/phone.png" alt="Phone" className="popup-icon-img"/>
+                      <div className="popup-text">Install App</div>
                     </div>
                   </div>
                 </div>
-                <div className="demo-arrow">→</div>
-                <div className="demo-notification">
-                  <img src="/assets/phone.png" alt="Phone" className="notification-icon-img"/>
-                  <div className="notification-text">
-                    <div className="notification-title">Price Alert!</div>
-                    <div className="notification-body">AK-47 Redline is now €19.99</div>
+                <div className="pwa-arrow">→</div>
+                <div className="pwa-homescreen">
+                  <div className="homescreen-grid">
+                    <div className="app-icon chrome">
+                      <img src="/assets/chrome.png" alt="SkinRadar" className="chrome-logo"/>
+                    </div>
+                    <div className="app-icon skinradar">
+                      <img src="/assets/skinradar2.png" alt="SkinRadar" className="skinradar-logo"/>
+                    </div>
+                    <div className="app-icon settings">
+                      <img src="/assets/settings.png" alt="Settings" className="app-icon-img"/>
+                    </div>
+                    <div className="app-icon camera">
+                      <img src="/assets/camera.png" alt="Camera" className="app-icon-img"/>
+                    </div>
+                  </div>
+                  <div className="homescreen-text">SkinRadar</div>
+                </div>
+              </div>
+              <div className="pwa-guide">
+                <div className="pwa-step">
+                  <div className="step-number">1</div>
+                  <div className="step-content">
+                    <div className="step-title">Open browser menu</div>
+                    <div className="step-description">Look for three dots or menu icon</div>
+                  </div>
+                </div>
+                <div className="pwa-step">
+                  <div className="step-number">2</div>
+                  <div className="step-content">
+                    <div className="step-title">Find "Install app" or "Add to Home Screen"</div>
+                    <div className="step-description">Different browsers use different names</div>
+                  </div>
+                </div>
+                <div className="pwa-step">
+                  <div className="step-number">3</div>
+                  <div className="step-content">
+                    <div className="step-title">Confirm installation</div>
+                    <div className="step-description">App will be added to your device</div>
+                  </div>
+                </div>
+                <div className="pwa-step">
+                  <div className="step-number">4</div>
+                  <div className="step-content">
+                    <div className="step-title">Find app on your desktop</div>
+                    <div className="step-description">Use it like a regular native application</div>
                   </div>
                 </div>
               </div>
-              <div className="how-it-works-steps">
-                <div className="work-step">
-                  <div className="step-number">1</div>
-                  <div className="step-title">Search for any CS2 skin</div>
+            </div>
+
+            {/* How It Works Section */}
+            <div className="home-section how-it-works-section">
+              <div className="section-header">
+                <img src="/assets/info.png" alt="How it works" className="section-icon"/>
+                <span className="section-title">How Price Alerts Work</span>
+              </div>
+              <div className="how-it-works-content">
+                <div className="demo-visualization">
+                  <div className="demo-phone">
+                    <div className="demo-screen">
+                      <div className="demo-search-bar">
+                        <img src="/assets/searchimage.png" alt="Search" className="demo-search-icon"/>
+                        <span className="demo-text">AK Redline</span>
+                      </div>
+                      <div className="demo-item">
+                        <img 
+                            src="https://steamcommunity-a.akamaihd.net/economy/image/class/730/4702298879" 
+                            alt="AK-47 Redline" 
+                            className="demo-item-img"
+                        />
+                        <div className="demo-item-details">
+                          <div className="demo-item-name">AK-47 | Redline</div>
+                          <div className="demo-price">€24.50</div>
+                        </div>
+                      </div>
+                      <div className="demo-alert-form">
+                        <div className="demo-input">
+                          <span>Alert when price drops to: €20.00</span>
+                        </div>
+                        <div className="demo-button">Set Alert</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="demo-arrow">→</div>
+                  <div className="demo-notification">
+                    <img src="/assets/phone.png" alt="Phone" className="notification-icon-img"/>
+                    <div className="notification-text">
+                      <div className="notification-title">Price Alert!</div>
+                      <div className="notification-body">AK-47 Redline is now €19.99</div>
+                    </div>
+                  </div>
                 </div>
-                <div className="work-step">
-                  <div className="step-number">2</div>
-                  <div className="step-title">Set your desired price alert</div>
-                </div>
-                <div className="work-step">
-                  <div className="step-number">3</div>
-                  <div className="step-title">Get notified when price drops</div>
+                <div className="how-it-works-steps">
+                  <div className="work-step">
+                    <div className="step-number">1</div>
+                    <div className="step-title">Search for any CS2 skin</div>
+                  </div>
+                  <div className="work-step">
+                    <div className="step-number">2</div>
+                    <div className="step-title">Set your desired price alert</div>
+                  </div>
+                  <div className="work-step">
+                    <div className="step-number">3</div>
+                    <div className="step-title">Get notified when price drops</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -338,6 +373,28 @@ const Home: React.FC<HomeProps> = ({
             </div>
           </div>
 
+          {/* Footer */}
+          <div className="footer">
+          <div className="footer-links">
+            <a href="#" onClick={onNavigateToPrivacy} className="footer-link">Privacy Policy</a>
+            <a href="#" onClick={onNavigateToTerms} className="footer-link">Terms of Service</a>
+          </div>
+          <div className="social-icons">
+            <a href="https://discord.com" target="_blank" rel="noopener noreferrer">
+              <img src="/assets/discord.png" alt="Discord" className="social-icon" />
+            </a>
+            <a href="https://instagram.com" target="_blank" rel="noopener noreferrer">
+              <img src="/assets/instagram.png" alt="Instagram" className="social-icon" />
+            </a>
+            <a href="https://youtube.com" target="_blank" rel="noopener noreferrer">
+              <img src="/assets/youtube.png" alt="YouTube" className="social-icon" />
+            </a>
+            <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer">
+              <img src="/assets/tiktok.png" alt="TikTok" className="social-icon" />
+            </a>
+          </div>
+          <p className="copyright">© 2025 SkinRadar. Not affiliated with Valve Corp.</p>
+          </div>
         </div>
       </div>
 

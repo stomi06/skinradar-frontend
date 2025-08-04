@@ -140,7 +140,6 @@ def get_image(fullname: str):
     except Exception as e:
         return {"error": str(e)}
 
-@lru_cache(maxsize=128)
 def get_market_prices(fullname: str):
     prices = {}
     try:
@@ -152,9 +151,10 @@ def get_market_prices(fullname: str):
             port= os.getenv('DB_PORT')
         )
         cursor = conn.cursor()
-        for market in ["csfloat", "bitskins", "skinport", "waxpeer"]:
+        # Dodaj ORDER BY updated_at DESC żeby pobrać najnowsze ceny
+        for market in ["csfloat", "bitskins", "skinport", "waxpeer", "shadowpay", "skinbaron"]:
             cursor.execute(
-                "SELECT min_price FROM prices WHERE market_hash_name = %s AND source = %s LIMIT 1",
+                "SELECT min_price FROM prices WHERE market_hash_name = %s AND source = %s ORDER BY updated_at DESC LIMIT 1",
                 (fullname, market)
             )
             row = cursor.fetchone()
@@ -233,20 +233,47 @@ def build_fuzzy_search_query(query: str, sort_by: str = "lowest"):
             typo_variants = [f"%{word}%", f"%{word[:-1]}%", f"%{word[1:]}%"]
             
             if len(word) >= 3:
+                # Add single character substitution patterns (key for "fore" → "lore")
                 for i in range(len(word)):
+                    # Replace each position with wildcard to catch substitution errors
+                    typo_variants.append(f"%{word[:i]}_{word[i+1:]}%")
+                    # Original doubling logic
                     typo_variants.append(f"%{word[:i] + word[i] + word[i:]}%")
+                    
+                    # NEW: Handle insertions (missing character in search term)
+                    # For "redlne" to match "redline", insert wildcard between characters
+                    if i < len(word):
+                        typo_variants.append(f"%{word[:i]}_{word[i:]}%")
+                
                 no_doubles = re.sub(r'(.)\1+', r'\1', word)
                 if no_doubles != word:
                     typo_variants.append(f"%{no_doubles}%")
             
-            typo_variants = typo_variants[:10]
+            typo_variants = typo_variants[:12]  # Increase limit slightly for new patterns
             base_query += f" AND ({' OR '.join(['p.market_hash_name ILIKE %s'] * len(typo_variants))})"
             params.extend(typo_variants)
         else:
-            # Multiple words - all must be present
-            conditions = [f"p.market_hash_name ILIKE %s" for _ in query_words]
-            base_query += f" AND ({' AND '.join(conditions)})"
-            params.extend([f"%{word}%" for word in query_words])
+            # For multi-word search, handle words separately to better catch errors
+            word_conditions = []
+            for word in query_words:
+                word_variants = [f"%{word}%"]
+                if len(word) >= 3:
+                    # Add letter substitutions for longer words
+                    word_variants.append(f"%{word[:-1]}%")
+                    word_variants.append(f"%{word[1:]}%")
+                    # Add wildcard substitutions for longer words
+                    for i in range(len(word)):
+                        if i > 0 and i < len(word)-1:  # Only for middle characters
+                            word_variants.append(f"%{word[:i]}_{word[i+1:]}%")
+                        # NEW: Add insertion handling for each position
+                        word_variants.append(f"%{word[:i]}_{word[i:]}%")
+                    
+                word_conditions.append(
+                    f"({' OR '.join(['p.market_hash_name ILIKE %s'] * len(word_variants))})"
+                )
+                params.extend(word_variants)
+            
+            base_query += f" AND ({' AND '.join(word_conditions)})"
     
     return base_query, params, order_clause
 
@@ -271,13 +298,15 @@ def get_price_suggestions_fuzzy(
         )
         cursor = conn.cursor()
         
-        # Zoptymalizowane zapytanie - pobiera wszystkie ceny od razu
+        # Zoptymalizowane zapytanie - pobiera wszystkie ceny od razu (dodano shadowpay i skinbaron)
         base_query = """
         SELECT p.market_hash_name, 
                MIN(CASE WHEN p.source = 'csfloat' THEN p.min_price END) as csfloat_price,
                MIN(CASE WHEN p.source = 'bitskins' THEN p.min_price END) as bitskins_price,
                MIN(CASE WHEN p.source = 'skinport' THEN p.min_price END) as skinport_price,
                MIN(CASE WHEN p.source = 'waxpeer' THEN p.min_price END) as waxpeer_price,
+               MIN(CASE WHEN p.source = 'shadowpay' THEN p.min_price END) as shadowpay_price,
+               MIN(CASE WHEN p.source = 'skinbaron' THEN p.min_price END) as skinbaron_price,
                MIN(p.min_price) as min_price
         FROM prices p 
         WHERE p.min_price IS NOT NULL AND p.min_price > 0
@@ -295,20 +324,44 @@ def get_price_suggestions_fuzzy(
                 typo_variants = [f"%{word}%", f"%{word[:-1]}%", f"%{word[1:]}%"]
                 
                 if len(word) >= 3:
+                    # Add single character substitution patterns (key for "fore" → "lore")
                     for i in range(len(word)):
+                        # Replace each position with wildcard to catch substitution errors
+                        typo_variants.append(f"%{word[:i]}_{word[i+1:]}%")
+                        # Original doubling logic
                         typo_variants.append(f"%{word[:i] + word[i] + word[i:]}%")
-                    no_doubles = re.sub(r'(.)\1+', r'\1', word)
-                    if no_doubles != word:
-                        typo_variants.append(f"%{no_doubles}%")
+                        
+                        # NEW: Handle insertions (missing character in search term)
+                        # For "redlne" to match "redline", insert wildcard between characters
+                        if i < len(word):
+                            typo_variants.append(f"%{word[:i]}_{word[i:]}%")
                 
-                typo_variants = typo_variants[:8]  # Ograniczenie dla wydajności
+                typo_variants = typo_variants[:12]  # Increase limit slightly for new patterns
                 base_query += f" AND ({' OR '.join(['p.market_hash_name ILIKE %s'] * len(typo_variants))})"
                 params.extend(typo_variants)
             else:
-                conditions = [f"p.market_hash_name ILIKE %s" for _ in query_words]
-                base_query += f" AND ({' AND '.join(conditions)})"
-                params.extend([f"%{word}%" for word in query_words])
-        
+                # For multi-word search, handle words separately to better catch errors
+                word_conditions = []
+                for word in query_words:
+                    word_variants = [f"%{word}%"]
+                    if len(word) >= 3:
+                        # Add letter substitutions for longer words
+                        word_variants.append(f"%{word[:-1]}%")
+                        word_variants.append(f"%{word[1:]}%")
+                        # Add wildcard substitutions for longer words
+                        for i in range(len(word)):
+                            if i > 0 and i < len(word)-1:  # Only for middle characters
+                                word_variants.append(f"%{word[:i]}_{word[i+1:]}%")
+                            # NEW: Add insertion handling for each position
+                            word_variants.append(f"%{word[:i]}_{word[i:]}%")
+                    
+                    word_conditions.append(
+                        f"({' OR '.join(['p.market_hash_name ILIKE %s'] * len(word_variants))})"
+                    )
+                    params.extend(word_variants)
+                
+                base_query += f" AND ({' AND '.join(word_conditions)})"
+    
         # Filtry dla StatTrak/Souvenir
         if stattrak:
             base_query += " AND (p.market_hash_name ILIKE %s OR p.market_hash_name ILIKE %s)"
@@ -362,13 +415,15 @@ def get_price_suggestions_fuzzy(
             bitskins_price = row[2] 
             skinport_price = row[3]
             waxpeer_price = row[4]
-            min_price = row[5]
+            shadowpay_price = row[5]  # Dodano shadowpay
+            skinbaron_price = row[6]  # Dodano skinbaron
+            min_price = row[7]        # Zaktualizowano indeks
             
             base_name = clean_base_name(market_hash_name)
             
             # Sprawdź similarity
             similarity = calculate_similarity(query, base_name)
-            if similarity < 0.15:  # Obniżony threshold dla lepszego wyszukiwania
+            if similarity < 0.6:  # Obniżony threshold dla lepszego wyszukiwania
                 continue
             
             # Jeśli ten base_name już istnieje, porównaj ceny
@@ -382,12 +437,14 @@ def get_price_suggestions_fuzzy(
                     if min_price >= existing_min_price:
                         continue
             
-            # Stwórz obiekt prices
+            # Stwórz obiekt prices (dodano shadowpay i skinbaron)
             all_prices = {
                 'csfloat': csfloat_price,
                 'bitskins': bitskins_price,
                 'skinport': skinport_price,
-                'waxpeer': waxpeer_price
+                'waxpeer': waxpeer_price,
+                'shadowpay': shadowpay_price,
+                'skinbaron': skinbaron_price
             }
             
             item_price_map[base_name] = {
@@ -404,8 +461,7 @@ def get_price_suggestions_fuzzy(
         # Posortuj po cenach i weź tylko 3 najlepsze
         sorted_items = sorted(
             item_price_map.items(), 
-            key=lambda x: x[1]['min_price'], 
-            reverse=(sort_by == "highest")
+            key=lambda x: (x[1]['min_price'], -x[1]['similarity']) if sort_by == "lowest" else (-x[1]['min_price'], -x[1]['similarity'])
         )[:3]
         
         # Buduj suggestions - batch queries dla lepszej wydajności
@@ -486,9 +542,8 @@ def get_price_suggestions_fuzzy(
         print(f"Error in fuzzy search: {e}")
         return []
 
-@lru_cache(maxsize=256)
 def get_price_suggestions_cached(query, condition, stattrak, souvenir, price_from, price_to, sort_by):
-    """Cached wrapper for price suggestions"""
+    """No cache - always fresh data"""
     return get_price_suggestions_fuzzy(query, condition, stattrak, souvenir, price_from, price_to, 50, sort_by)
 
 @router.get("/suggestions")

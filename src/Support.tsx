@@ -42,7 +42,7 @@ const Support: React.FC<SupportProps> = ({
   // Funkcja do pobierania liczby użytkowników
   const fetchActiveUsers = async () => {
     try {
-      const response = await fetch('https://skinradar-d0a6bmd2a3c6dbde.northeurope-01.azurewebsites.net/api/users/count');
+      const response = await fetch('http://192.168.55.107:8000/api/users/count');
       if (response.ok) {
         const data = await response.json();
         setActiveUsers(data.count);
@@ -232,7 +232,6 @@ const Support: React.FC<SupportProps> = ({
           <div className="footer-links">
             <a href="/terms" className="footer-link">Privacy Policy</a>
             <a href="/privacy" className="footer-link">Terms of Service</a>
-            <a href="/copyright" className="footer-link">Copyright Info</a>
           </div>
           <div className="social-icons">
             <a href="https://discord.com" target="_blank" rel="noopener noreferrer">
@@ -243,6 +242,9 @@ const Support: React.FC<SupportProps> = ({
             </a>
             <a href="https://youtube.com" target="_blank" rel="noopener noreferrer">
               <img src="/assets/youtube.png" alt="YouTube" className="social-icon" />
+            </a>
+            <a href="https://tiktok.com" target="_blank" rel="noopener noreferrer">
+              <img src="/assets/tiktok.png" alt="TikTok" className="social-icon" />
             </a>
           </div>
           <p className="copyright">© 2025 SkinRadar. Not affiliated with Valve Corp.</p>

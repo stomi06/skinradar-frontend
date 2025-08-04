@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import queryString from 'query-string';
 import './styles/style.css';
+import './styles/desktopstyle.css';
 import ItemList from './ItemList';
 import ItemAdd from './ItemAdd';
 import Home from './Home';
 import Notifications from './Notifications';
 import Settings from './Settings';
 import Support from './Support';
+import Privacy from './Privacy';
+import Terms from './Terms';
 
 const SkinRadarApp = () => {
   const [steamId, setSteamId] = useState<string | null>(() => {
@@ -43,6 +46,9 @@ const SkinRadarApp = () => {
     };
   });
 
+  // Dodaj stan dla liczby alertów (po innych useState):
+  const [userAlertsCount, setUserAlertsCount] = useState<number>(0);
+
   // Zapisuj stan ItemAdd do sessionStorage przy każdej zmianie
   useEffect(() => {
     sessionStorage.setItem('itemAdd_global_state', JSON.stringify(itemAddState));
@@ -51,7 +57,7 @@ const SkinRadarApp = () => {
   const handleSteamLogin = async () => {
     try {
       
-      window.location.href = `https://skinradar-d0a6bmd2a3c6dbde.northeurope-01.azurewebsites.net/auth/steam`;
+      window.location.href = `http://192.168.55.107:8000/auth/steam`;
     } catch (error) {
       alert('Error: An error occurred during Steam login');
     }
@@ -63,21 +69,21 @@ const SkinRadarApp = () => {
     const username = params.username as string;
     const avatar = params.avatar as string;
     const firstLogin = params.first_login as string;
-    const premium = params.premium === 'true' || params.premium === 'True';
+    const isPremium = params.premium === 'true' || params.premium === 'True';
     
     if (steamId && username && avatar && firstLogin) { 
       setSteamId(steamId);
       setUsername(username);
       setAvatar(avatar);
       setFirstLogin(firstLogin);
-      setIsPremium(premium);
+      setIsPremium(isPremium);
       
       // Zapisz do sessionStorage
       sessionStorage.setItem('steamId', steamId);
       sessionStorage.setItem('username', username);
       sessionStorage.setItem('avatar', avatar);
       sessionStorage.setItem('firstLogin', firstLogin);
-      sessionStorage.setItem('isPremium', premium.toString());
+      sessionStorage.setItem('isPremium', isPremium.toString());
       
       // Wyczyść URL po zalogowaniu
       window.history.replaceState({}, document.title, window.location.pathname);
@@ -139,6 +145,13 @@ const SkinRadarApp = () => {
   const navigateToNotifications = () => setCurrentPage('notifications');
   const navigateToSettings = () => setCurrentPage('settings');
   const navigateToSupport = () => setCurrentPage('support');
+  const navigateToPrivacy = () => setCurrentPage('privacy');
+  const navigateToTerms = () => setCurrentPage('terms');
+
+  // Dodaj funkcję do aktualizacji count:
+  const updateUserAlertsCount = (count: number) => {
+    setUserAlertsCount(count);
+  };
 
   const renderCurrentPage = () => {
     if (!steamId || !username || !avatar || !firstLogin) return null;
@@ -154,6 +167,8 @@ const SkinRadarApp = () => {
       onNavigateToNotifications: navigateToNotifications,
       onNavigateToSettings: navigateToSettings,
       onNavigateToSupport: navigateToSupport,
+      onNavigateToPrivacy: navigateToPrivacy,  // Popraw: dodaj dwukropek
+      onNavigateToTerms: navigateToTerms,      // Popraw: dodaj dwukropek
       isPremium
     };
 
@@ -167,16 +182,29 @@ const SkinRadarApp = () => {
             onNavigateToList={navigateToFavorites}
             itemAddState={itemAddState}
             setItemAddState={setItemAddState}
+            steamId={steamId}
+            userAlertsCount={userAlertsCount}
+            updateUserAlertsCount={updateUserAlertsCount}
           />
         );
       case 'favorites':
-        return <ItemList {...commonProps} />;
+        return (
+          <ItemList 
+            {...commonProps} 
+            steamId={steamId}
+            updateUserAlertsCount={updateUserAlertsCount}
+          />
+        );
       case 'notifications':
         return <Notifications {...commonProps} />;
       case 'settings':
         return <Settings {...commonProps} />;
       case 'support':
         return <Support {...commonProps} />;
+      case 'privacy':    // Dodaj
+        return <Privacy onGoBack={navigateToHome} />; // Przekaż funkcję powrotu
+      case 'terms':      // Dodaj
+        return <Terms onGoBack={navigateToHome} />;   // Przekaż funkcję powrotu
       default:
         return <Home {...commonProps} />;
     }
@@ -230,7 +258,6 @@ const SkinRadarApp = () => {
         <div className="footer-links">
           <a href="/terms" className="footer-link">Privacy Policy</a>
           <a href="/privacy" className="footer-link">Terms of Service</a>
-          <a href="/copyright" className="footer-link">Copyright Info</a>
         </div>
         <div className="social-icons">
           <a href="https://discord.com" target="_blank" rel="noopener noreferrer">

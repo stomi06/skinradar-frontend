@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import './styles/style.css';
+import './styles/desktopstyle.css';
 
 interface ItemAddProps {
   username: string;
@@ -14,10 +15,21 @@ interface ItemAddProps {
   onNavigateToSupport: () => void;
   itemAddState: any;
   setItemAddState: any;
-  isPremium: boolean; // Dodaj tę linię
+  isPremium: boolean;
+  steamId: string;
+  userAlertsCount: number;
+  updateUserAlertsCount?: (count: number) => void;
 }
 
 const wearLevels = ["Factory New", "Minimal Wear", "Field-Tested", "Well-Worn", "Battle-Scarred"];
+
+// Definicje funkcji linków - przenieś na górę
+const csfloatLink = (name: string) => `https://csfloat.com/search?sort_by=lowest_price&type=buy_now&market_hash_name=${encodeURIComponent(name)}`;
+const bitskinsLink = (name: string) => `https://bitskins.com/market/cs2?search={%22order%22:[{%22field%22:%22price%22,%22order%22:%22ASC%22}],%22where%22:{%22skin_name%22:%22${encodeURIComponent(name)}%22}}`;
+const skinportLink = (name: string) => `https://skinport.com/pl/market?search=${encodeURIComponent(name)}`;
+const waxpeerLink = (name: string) => `https://waxpeer.com/pl?sort=ASC&order=price&all=0&exact=0&search=${encodeURIComponent(name)}`;
+const shadowpayLink = (name: string) => `https://shadowpay.com/csgo-items?price_from=0&price_to=99802.67&search=${encodeURIComponent(name)}`;
+const skinbaronLink = (name: string) => `https://skinbaron.de/en/csgo?str=${encodeURIComponent(name)}&sort=CF`;
 
 const rarityStyleMap: Record<string, { colors: string[]; borderColor: string }> = {
   'exotic':    { colors: ['rgba(166,0,231,0.2)', '#10172c'], borderColor: '#a600e7' },
@@ -59,7 +71,10 @@ const ItemAdd: React.FC<ItemAddProps> = ({
   onNavigateToSupport,
   itemAddState,
   setItemAddState,
-  isPremium // Dodaj tę linię
+  isPremium,
+  steamId,
+  userAlertsCount,
+  updateUserAlertsCount
 }) => {
   // Użyj stanu z props zamiast lokalnego
   const {
@@ -71,7 +86,6 @@ const ItemAdd: React.FC<ItemAddProps> = ({
     condition,
     priceFrom,
     priceTo,
-    isFilterVisible,
     noMatchesError
   } = itemAddState;
 
@@ -85,7 +99,13 @@ const ItemAdd: React.FC<ItemAddProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
   const [openPricesIndex, setOpenPricesIndex] = useState<number | null>(null);
+  const [selectedSuggestion, setSelectedSuggestion] = useState<any>(null);
   const [activeMenu2] = useState<number>(1); // Search is index 1
+  const [isFilterVisible, setIsFilterVisible] = useState(false); // Przeniesiony z globalnego stanu
+
+  const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
+  const [alertModalSuggestion, setAlertModalSuggestion] = useState<any>(null);
+  const [alertPrice, setAlertPrice] = useState('');
 
   // Resetuj sessionStorage przy wylogowaniu
   const handleLogout = () => {
@@ -121,7 +141,7 @@ const ItemAdd: React.FC<ItemAddProps> = ({
     if (priceTo) queryParams.append('price_to', priceTo);
 
     try {
-      const response = await fetch(`https://skinradar-d0a6bmd2a3c6dbde.northeurope-01.azurewebsites.net/suggestions?${queryParams.toString()}`);
+      const response = await fetch(`http://192.168.55.107:8000/suggestions?${queryParams.toString()}`);
       const data = await response.json();
       
       updateState({ noMatchesError: '' });
@@ -165,7 +185,8 @@ const ItemAdd: React.FC<ItemAddProps> = ({
       await Promise.all(imagePromises);
       updateState({ 
         suggestions: newSuggestions,
-        showSuggestions: true 
+        showSuggestions: true,
+        noMatchesError: ''
       });
       setIsLoading(false);
     } catch (error) {
@@ -175,10 +196,127 @@ const ItemAdd: React.FC<ItemAddProps> = ({
   };
 
   const toggleFilterVisibility = () => {
-    updateState({ isFilterVisible: !isFilterVisible });
+    setIsFilterVisible(!isFilterVisible); // Teraz używa lokalnego stanu
   };
 
   const formattedDate = firstLogin ? new Date(firstLogin).toLocaleDateString() : '';
+
+  const handlePricesClick = (suggestion: any, index: number) => {
+    setSelectedSuggestion(suggestion);
+    setOpenPricesIndex(index);
+  };
+
+  const closePrices = () => {
+    setOpenPricesIndex(null);
+    setSelectedSuggestion(null);
+  };
+
+  const handleHeartClick = (suggestion: any, e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setAlertModalSuggestion(suggestion);
+    setIsAlertModalOpen(true);
+    
+    // Ustaw domyślną cenę na podstawie najniższej dostępnej ceny
+    const priceObjs = [
+      { value: suggestion.prices?.csfloat },
+      { value: suggestion.prices?.bitskins },
+      { value: suggestion.prices?.skinport },
+      { value: suggestion.prices?.waxpeer },
+      { value: suggestion.prices?.shadowpay },
+      { value: suggestion.prices?.skinbaron }
+    ].filter(p => typeof p.value === 'number' && !isNaN(p.value));
+    
+    const minPrice = priceObjs.length > 0 
+      ? Math.min(...priceObjs.map(p => p.value))
+      : '';
+      
+    setAlertPrice(minPrice ? (minPrice * 0.9).toFixed(2) : ''); // 10% taniej
+  };
+
+  const closeAlertModal = () => {
+    setIsAlertModalOpen(false);
+    setAlertModalSuggestion(null);
+    setAlertPrice('');
+  };
+
+  const handleSetAlert = async () => {
+    if (!alertPrice || parseFloat(alertPrice) <= 0) {
+      alert('Please enter a valid price');
+      return;
+    }
+    const maxAlerts = isPremium ? 5 : 3;
+    if (userAlertsCount >= maxAlerts) {
+      alert(`You've reached the maximum number of alerts (${maxAlerts}).`);
+      return;
+    }
+    
+    try {
+      if (!steamId) {
+        alert('User not logged in');
+        return;
+      }
+      
+      const requestData = {
+        steam_id: steamId,
+        market_hash_name: alertModalSuggestion.display_fullname || alertModalSuggestion.market_hash_name,
+        alert_price: parseFloat(alertPrice),
+        csfloat_price: alertModalSuggestion.prices?.csfloat || null,
+        skinport_price: alertModalSuggestion.prices?.skinport || null,
+        bitskins_price: alertModalSuggestion.prices?.bitskins || null,
+        waxpeer_price: alertModalSuggestion.prices?.waxpeer || null,
+        shadowpay_price: alertModalSuggestion.prices?.shadowpay || null,
+        skinbaron_price: alertModalSuggestion.prices?.skinbaron || null
+      };
+      
+      console.log('Sending request data:', requestData);
+      
+      const response = await fetch('http://192.168.55.107:8000/alerts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestData)
+      });
+      
+      console.log('Response status:', response.status);
+      console.log('Response ok:', response.ok);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Server error response:', errorText);
+        
+        // Sprawdź czy to błąd z backendu o limicie
+        if (errorText.includes('Maximum number of alerts')) {
+          console.log('Backend blocked due to limit check');
+        }
+        
+        try {
+          const errorJson = JSON.parse(errorText);
+          console.error('Parsed error:', errorJson);
+          throw new Error(JSON.stringify(errorJson.detail || errorJson));
+        } catch (parseError) {
+          throw new Error(`Server error: ${response.status} - ${errorText}`);
+        }
+      } else {
+        console.log('SUCCESS: Alert created on backend');
+      }
+      
+      const result = await response.json();
+      console.log('Success response:', result);
+      alert('Alert added successfully!');
+      closeAlertModal();
+      
+      // Zwiększ count o 1
+      if (updateUserAlertsCount) {
+        updateUserAlertsCount(userAlertsCount + 1);
+      }
+      
+    } catch (error: any) {
+      console.error('Full error:', error);
+      alert(`Error: ${error.message}`);
+    }
+  };
 
   return (
     <div className="container">
@@ -281,7 +419,7 @@ const ItemAdd: React.FC<ItemAddProps> = ({
                 <input
                   type="number"
                   min="0"
-                  placeholder="ထ"
+                  placeholder="∞"
                   className="price-filter-input"
                   value={priceTo}
                   onChange={e => updateState({ priceTo: e.target.value })}
@@ -353,21 +491,19 @@ const ItemAdd: React.FC<ItemAddProps> = ({
             {showSuggestions && !isLoading && (
               <div className={`suggestions-container${showSuggestions ? ' suggestions-container-visible' : ''}`}>
                 {suggestions.map((suggestion: any, index: number) => {
-                  const csfloatLink = (name: string) => `https://csfloat.com/search?sort_by=lowest_price&type=buy_now&market_hash_name=${encodeURIComponent(name)}`;
-                  const bitskinsLink = (name: string) => `https://bitskins.com/market/cs2?search={%22order%22:[{%22field%22:%22price%22,%22order%22:%22ASC%22}],%22where%22:{%22skin_name%22:%22${encodeURIComponent(name)}%22}}`;
-                  const skinportLink = (name: string) => `https://skinport.com/pl/market?search=${encodeURIComponent(name)}`;
-                  const waxpeerLink = (name: string) => `https://waxpeer.com/pl?sort=ASC&order=price&all=0&exact=0&search=${encodeURIComponent(name)}`;
-
                   const priceObjs = [
                     { market: 'csfloat', value: suggestion.prices?.csfloat, link: csfloatLink(suggestion.display_fullname) },
                     { market: 'bitskins', value: suggestion.prices?.bitskins, link: bitskinsLink(suggestion.display_fullname) },
                     { market: 'skinport', value: suggestion.prices?.skinport, link: skinportLink(suggestion.display_fullname) },
-                    { market: 'waxpeer', value: suggestion.prices?.waxpeer, link: waxpeerLink(suggestion.display_fullname) }
+                    { market: 'waxpeer', value: suggestion.prices?.waxpeer, link: waxpeerLink(suggestion.display_fullname) },
+                    { market: 'shadowpay', value: suggestion.prices?.shadowpay, link: shadowpayLink(suggestion.display_fullname) },
+                    { market: 'skinbaron', value: suggestion.prices?.skinbaron, link: skinbaronLink(suggestion.display_fullname) }
                   ].filter(p => typeof p.value === 'number' && !isNaN(p.value));
 
                   const minObj = priceObjs.length > 0
                     ? priceObjs.reduce((min, p) => p.value < min.value ? p : min, priceObjs[0])
                     : null;
+
                   const rarityKey = String(suggestion.rarity ?? '').toLowerCase().trim();
                   const rarityStyle = rarityStyleMap[rarityKey];
                   const name = suggestion.display_fullname ?? suggestion.market_hash_name;
@@ -395,17 +531,19 @@ const ItemAdd: React.FC<ItemAddProps> = ({
                     >
                       <div className="suggestion-menu">
                         <a
-                          onClick={() => setOpenPricesIndex(openPricesIndex === index ? null : index)}
+                          onClick={() => handlePricesClick(suggestion, index)}
                           style={{ cursor: "pointer" }}
                         >
                           <img src='assets/cart.png' className='suggestion-cart' alt="Ceny" />
                         </a>
-                        <a><img src="assets/heart.png" className="suggestion-heart" /></a>
+                        <a onClick={(e) => handleHeartClick(suggestion, e)} style={{ cursor: "pointer" }}>
+                          <img src="assets/eye.png" className="suggestion-heart" alt="Favorites" />
+                        </a>
                       </div>
                       {suggestion.imageurl && (
                         <img src={suggestion.imageurl} alt={name} className="suggestion-image" />
                       )}
-                      {/* Prefix */}
+                      
                       <div className="suggestion-info">
                         {name.startsWith('StatTrak™ ') && (
                           <span className="suggestion-prefix suggestion-prefix-stattrak">StatTrak™</span>
@@ -431,6 +569,7 @@ const ItemAdd: React.FC<ItemAddProps> = ({
                           {suggestion.description}
                         </span>
                       </div>
+                      
                       <div className="suggestion-price-container">
                         <span className="suggestion-price">
                           {minObj ? `$${minObj.value.toFixed(2)}` : 'N/A'}
@@ -448,43 +587,15 @@ const ItemAdd: React.FC<ItemAddProps> = ({
                                         ? 'skinport.com'
                                         : minObj.market === 'waxpeer'
                                           ? 'waxpeer.com'
-                                          : '')
+                                          : minObj.market === 'shadowpay'
+                                            ? 'shadowpay.com'
+                                            : minObj.market === 'skinbaron'
+                                              ? 'skinbaron.de'
+                                              : '')
                                 : ''}
                             </div>
                           </button>
                         </a>
-                      </div>
-                      <div className="suggestion-prices" style={{opacity: openPricesIndex === index ? 1 : 0, visibility: openPricesIndex === index ? "visible" : "hidden"}} onClick={() => setOpenPricesIndex(null)}>
-                        <div className="prices-container" onClick={e => e.stopPropagation()}>
-                          <a href={csfloatLink(suggestion.display_fullname)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
-                            <div className="price-market">
-                              <img src="assets/csfloat.png" alt="CSFloat" className="price-market-img" />
-                              <span className="price-label">CSFloat:</span>
-                              <span className="price-value">${suggestion.prices?.csfloat ?? 'N/A'}</span>
-                            </div>
-                          </a>
-                          <a href={bitskinsLink(suggestion.display_fullname)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
-                            <div className="price-market">
-                              <img src="assets/bitskins.png" alt="BitSkins" className="price-market-img" />
-                              <span className="price-label">BitSkins:</span>
-                              <span className="price-value">${suggestion.prices?.bitskins ?? 'N/A'}</span>
-                            </div>
-                          </a>
-                          <a href={skinportLink(suggestion.display_fullname)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
-                            <div className="price-market">
-                              <img src="assets/skinport.png" alt="SkinPort" className="price-market-img" />
-                              <span className="price-label">SkinPort:</span>
-                              <span className="price-value">${suggestion.prices?.skinport ?? 'N/A'}</span>
-                            </div>
-                          </a>
-                          <a href={waxpeerLink(suggestion.display_fullname)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
-                            <div className="price-market">
-                              <img src="assets/waxpeer.png" alt="Waxpeer" className="price-market-img" />
-                              <span className="price-label">Waxpeer:</span>
-                              <span className="price-value">${suggestion.prices?.waxpeer ?? 'N/A'}</span>
-                            </div>
-                          </a>
-                        </div>
                       </div>
                     </div>
                   );
@@ -494,6 +605,225 @@ const ItemAdd: React.FC<ItemAddProps> = ({
           </div>
         </div>
       </div>
+
+      {/* Modal z cenami - renderowany na końcu */}
+      {selectedSuggestion && (
+        <div 
+          className={`suggestion-prices${openPricesIndex !== null ? ' prices-visible' : ''}`}
+          onClick={closePrices}
+        >
+          <div className="prices-modal-content" onClick={closePrices}>
+            {/* Header z obrazkiem i nazwą */}
+            <div className="prices-item-header" onClick={e => e.stopPropagation()}>
+              {selectedSuggestion.imageurl && (
+                <img 
+                  src={selectedSuggestion.imageurl} 
+                  alt={selectedSuggestion.display_fullname} 
+                  className="prices-item-image" 
+                />
+              )}
+              <div className="prices-item-name">
+                <div className="prices-item-title">
+                  {/* Prefiksy */}
+                  {(() => {
+                    const name = selectedSuggestion.display_fullname ?? selectedSuggestion.market_hash_name;
+                    const prefixes = [];
+                    
+                    if (name.startsWith('StatTrak™ ')) {
+                      prefixes.push(<span key="stattrak" className="prices-item-prefix prices-item-prefix-stattrak">StatTrak™</span>);
+                    }
+                    if (name.startsWith('Souvenir ')) {
+                      prefixes.push(<span key="souvenir" className="prices-item-prefix prices-item-prefix-souvenir">Souvenir</span>);
+                    }
+                    if (name.startsWith('★ StatTrak™ ')) {
+                      prefixes.push(<span key="stattrak-knife" className="prices-item-prefix prices-item-prefix-stattrak">StatTrak™</span>);
+                    }
+                    
+                    return prefixes.length > 0 ? <div className="prices-item-prefixes">{prefixes}</div> : null;
+                  })()}
+                  {(() => {
+                    const name = selectedSuggestion.display_fullname ?? selectedSuggestion.market_hash_name;
+                    return name
+                      .replace(/^StatTrak™ /, '')
+                      .replace(/^Souvenir /, '')
+                      .replace(/^★ StatTrak™ /, '★ ')
+                      .replace(/\s*\((Factory New|Minimal Wear|Field-Tested|Well-Worn|Battle-Scarred)\)$/, '');
+                  })()}
+                </div>
+                {selectedSuggestion.display_wear && (
+                  <div className="prices-item-wear">{selectedSuggestion.display_wear}</div>
+                )}
+              </div>
+            </div>
+            
+            {/* Kontener z cenami */}
+            <div className="prices-container">
+              {selectedSuggestion.prices?.csfloat && (
+                <a href={csfloatLink(selectedSuggestion.display_fullname)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                  <div className="price-market" onClick={e => e.stopPropagation()}>
+                    <img src="assets/csfloat.png" alt="CSFloat" className="price-market-img" />
+                    <span className="price-label">CSFloat</span>
+                    <span className="price-value">${selectedSuggestion.prices.csfloat.toFixed(2)}</span>
+                    <img src="assets/external-arrow.png" alt="External" className="market-arrow" />
+                  </div>
+                </a>
+              )}
+              {selectedSuggestion.prices?.bitskins && (
+                <a href={bitskinsLink(selectedSuggestion.display_fullname)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                  <div className="price-market" onClick={e => e.stopPropagation()}>
+                    <img src="assets/bitskins.png" alt="BitSkins" className="price-market-img" />
+                    <span className="price-label">BitSkins</span>
+                    <span className="price-value">${selectedSuggestion.prices.bitskins.toFixed(2)}</span>
+                    <img src="assets/external-arrow.png" alt="External" className="market-arrow" />
+                  </div>
+                </a>
+              )}
+              {selectedSuggestion.prices?.skinport && (
+                <a href={skinportLink(selectedSuggestion.display_fullname)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                  <div className="price-market" onClick={e => e.stopPropagation()}>
+                    <img src="assets/skinport.png" alt="SkinPort" className="price-market-img" />
+                    <span className="price-label">SkinPort</span>
+                    <span className="price-value">${selectedSuggestion.prices.skinport.toFixed(2)}</span>
+                    <img src="assets/external-arrow.png" alt="External" className="market-arrow" />
+                  </div>
+                </a>
+              )}
+              {selectedSuggestion.prices?.waxpeer && (
+                <a href={waxpeerLink(selectedSuggestion.display_fullname)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                  <div className="price-market" onClick={e => e.stopPropagation()}>
+                    <img src="assets/waxpeer.png" alt="Waxpeer" className="price-market-img" />
+                    <span className="price-label">Waxpeer</span>
+                    <span className="price-value">${selectedSuggestion.prices.waxpeer.toFixed(2)}</span>
+                    <img src="assets/external-arrow.png" alt="External" className="market-arrow" />
+                  </div>
+                </a>
+              )}
+              {selectedSuggestion.prices?.shadowpay && (
+                <a href={shadowpayLink(selectedSuggestion.display_fullname)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                  <div className="price-market" onClick={e => e.stopPropagation()}>
+                    <img src="assets/shadowpay.png" alt="ShadowPay" className="price-market-img" />
+                    <span className="price-label">ShadowPay</span>
+                    <span className="price-value">${selectedSuggestion.prices.shadowpay.toFixed(2)}</span>
+                    <img src="assets/external-arrow.png" alt="External" className="market-arrow" />
+                  </div>
+                </a>
+              )}
+              {selectedSuggestion.prices?.skinbaron && (
+                <a href={skinbaronLink(selectedSuggestion.display_fullname)} target="_blank" rel="noopener noreferrer" style={{ textDecoration: "none" }}>
+                  <div className="price-market" onClick={e => e.stopPropagation()}>
+                    <img src="assets/skinbaron.png" alt="SkinBaron" className="price-market-img" />
+                    <span className="price-label">SkinBaron</span>
+                    <span className="price-value">${selectedSuggestion.prices.skinbaron.toFixed(2)}</span>
+                    <img src="assets/external-arrow.png" alt="External" className="market-arrow" />
+                  </div>
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Modal alertu - renderowany na końcu */}
+      {isAlertModalOpen && alertModalSuggestion && (
+        <div 
+          className={`alert-modal${isAlertModalOpen ? ' alert-modal-visible' : ''}`}
+          onClick={closeAlertModal}
+        >
+          <div className="alert-modal-content" onClick={e => e.stopPropagation()}>
+            {/* Header */}
+            <div className="alert-modal-header">
+              <div className="alert-modal-title">Set Price Alert</div>
+            </div>
+            
+            {/* Item info */}
+            <div className="alert-item-info">
+              {alertModalSuggestion.imageurl && (
+                <img 
+                  src={alertModalSuggestion.imageurl} 
+                  alt={alertModalSuggestion.display_fullname} 
+                  className="alert-item-image" 
+                />
+              )}
+              <div className="alert-item-details">
+                <div className="alert-item-name">
+                  {/* Prefiksy */}
+                  {(() => {
+                    const name = alertModalSuggestion.display_fullname ?? alertModalSuggestion.market_hash_name;
+                    const prefixes = [];
+                    
+                    if (name.startsWith('StatTrak™ ')) {
+                      prefixes.push(<span key="stattrak" className="prices-item-prefix prices-item-prefix-stattrak">StatTrak™</span>);
+                    }
+                    if (name.startsWith('Souvenir ')) {
+                      prefixes.push(<span key="souvenir" className="prices-item-prefix prices-item-prefix-souvenir">Souvenir</span>);
+                    }
+                    if (name.startsWith('★ StatTrak™ ')) {
+                      prefixes.push(<span key="stattrak-knife" className="prices-item-prefix prices-item-prefix-stattrak">StatTrak™</span>);
+                    }
+                    
+                    return prefixes.length > 0 ? <div className="prices-item-prefixes">{prefixes}</div> : null;
+                  })()}
+                  {(() => {
+                    const name = alertModalSuggestion.display_fullname ?? alertModalSuggestion.market_hash_name;
+                    return name
+                      .replace(/^StatTrak™ /, '')
+                      .replace(/^Souvenir /, '')
+                      .replace(/^★ StatTrak™ /, '★ ')
+                      .replace(/\s*\((Factory New|Minimal Wear|Field-Tested|Well-Worn|Battle-Scarred)\)$/, '');
+                  })()}
+                </div>
+                {alertModalSuggestion.display_wear && (
+                  <div className="alert-item-wear">{alertModalSuggestion.display_wear}</div>
+                )}
+              </div>
+            </div>
+            
+            {/* Price input */}
+            <div className="alert-price-section">
+              <div className="alert-price-label">Notify me when price drops to:</div>
+              <div className="alert-price-input-container">
+                <span className="alert-price-currency">$</span>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0.00"
+                  className="alert-price-input"
+                  value={alertPrice}
+                  onChange={e => setAlertPrice(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div className="alert-price-hint">
+                Current lowest: ${(() => {
+                  const priceObjs = [
+                    { value: alertModalSuggestion.prices?.csfloat },
+                    { value: alertModalSuggestion.prices?.bitskins },
+                    { value: alertModalSuggestion.prices?.skinport },
+                    { value: alertModalSuggestion.prices?.waxpeer },
+                    { value: alertModalSuggestion.prices?.shadowpay },
+                    { value: alertModalSuggestion.prices?.skinbaron }
+                  ].filter(p => typeof p.value === 'number' && !isNaN(p.value));
+                  
+                  return priceObjs.length > 0 
+                    ? Math.min(...priceObjs.map(p => p.value)).toFixed(2)
+                    : 'N/A';
+                })()}
+              </div>
+            </div>
+            
+            {/* Buttons */}
+            <div className="alert-modal-buttons">
+              <button className="alert-button-cancel" onClick={closeAlertModal}>
+                Cancel
+              </button>
+              <button className="alert-button-confirm" onClick={handleSetAlert}>
+                Set Alert
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       <div className="menu2">
         <div className="menu2-inner">

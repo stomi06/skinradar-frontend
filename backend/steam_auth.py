@@ -61,46 +61,65 @@ async def steam_callback(request: Request):
     
     steam_id = steam_id_match.group(1) or steam_id_match.group(2)
     
-    async with aiohttp.ClientSession() as session:
-        async with session.get(
-            "http://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/",
-            params={'key': STEAM_API_KEY, 'steamids': steam_id}
-        ) as response:
-            if response.status != 200:
-                raise HTTPException(status_code=500, detail="Steam API error")
-            data = await response.json()
-            players = data.get('response', {}).get('players', [])
-            if not players:
-                raise HTTPException(status_code=404, detail="Steam user not found")
-            user_info = players[0]
-    
-    conn = await get_db_connection()
-    try:
-        # Wstaw lub aktualizuj rekord
-        await conn.execute(
-            '''
-            INSERT INTO user_ids (steam_id, username, first_login, premium)
-            VALUES ($1, $2, $3, $4)
-            ON CONFLICT (steam_id) DO UPDATE
-            SET username = EXCLUDED.username
-            ''',
-            steam_id,
-            user_info['personaname'],
-            datetime.datetime.utcnow(),
-            False  # Tylko dla nowych użytkowników
-        )
+    if not STEAM_API_KEY:
+        logging.error("Steam API key is missing")
+        raise HTTPException(status_code=500, detail="Server configuration error")
         
-        # Pobierz aktualne dane
-        user_data = await conn.fetchrow(
-            'SELECT first_login, premium FROM user_ids WHERE steam_id = $1',
-            steam_id
-        )
-        first_login = user_data['first_login']
-        premium = user_data['premium']
-        print(f"DEBUG: User {steam_id} username updated, premium status: {premium}")  # Debug
-    finally:
-        await conn.close()
-
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                "https://api.steampowered.com/ISteamUser/GetPlayerSummaries/v0002/",
+                params={'key': STEAM_API_KEY, 'steamids': steam_id},
+                timeout=10  # Add timeout
+            ) as response:
+                if response.status != 200:
+                    error_text = await response.text()
+                    logging.error(f"Steam API error: Status {response.status}, Response: {error_text}")
+                    raise HTTPException(status_code=500, detail="Steam API error")
+                data = await response.json()
+                players = data.get('response', {}).get('players', [])
+                if not players:
+                    raise HTTPException(status_code=404, detail="Steam user not found")
+                user_info = players[0]
+                print(f"DEBUG: Steam API response successful, user_info: {user_info}")
+        
+        conn = await get_db_connection()
+        try:
+            print(f"DEBUG: Database connected, inserting user data")
+            # Wstaw lub aktualizuj rekord
+            await conn.execute(
+                '''
+                INSERT INTO user_ids (steam_id, username, first_login, premium)
+                VALUES ($1, $2, $3, $4)
+                ON CONFLICT (steam_id) DO UPDATE
+                SET username = EXCLUDED.username
+                ''',
+                steam_id,
+                user_info['personaname'],
+                datetime.datetime.utcnow(),
+                False
+            )
+            print(f"DEBUG: User record inserted/updated successfully")
+            
+            # Pobierz aktualne dane
+            user_data = await conn.fetchrow(
+                'SELECT first_login, premium FROM user_ids WHERE steam_id = $1',
+                steam_id
+            )
+            print(f"DEBUG: Retrieved user data: {user_data}")
+            
+            first_login = user_data['first_login']
+            premium = user_data['premium']
+        except Exception as db_error:
+            logging.error(f"Database operation failed: {str(db_error)}")
+            raise HTTPException(status_code=500, detail=f"Database error: {str(db_error)}")
+        finally:
+            await conn.close()
+            
+    except Exception as e:
+        logging.error(f"Unexpected error during authentication: {type(e).__name__}: {str(e)}")
+        raise HTTPException(status_code=500, detail="Error processing authentication")
+    
     redirect_url = (
         f"{MOBILE_REDIRECT_URL}"
         f"username={user_info['personaname']}"
